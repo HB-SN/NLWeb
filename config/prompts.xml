@@ -5,7 +5,7 @@
 
 <!-- This file has all the prompts that are used in the process of running a query. -->
 
-  <Site id="default">
+  <Site id="sos-sms">
     <Item>
 
     <Prompt ref="DetectIrrelevantQueryPrompt">
@@ -145,14 +145,12 @@
         What is the kind of item the query is likely seeking with this query: {request.query}
         
         Common item types include:
-        - Recipe (for cooking, food preparation)
-        - Movie (for films, cinema)
-        - Product (for items to purchase)
-        - Restaurant (for dining establishments)
-        - Statistics (for demographic data, population statistics, economic indicators about places like counties, cities, states)
-        - Item (for general items that don't fit other categories)
-        
-        If the query is asking about statistical data like population, median income, demographics, or economic indicators for geographic locations, return "Statistics".
+        - Emergency shelter and emergency accommodation
+        - Where to find medical care, such as hospitals, clinics and emergency aid stations
+        - Where to find water and food
+        - How to contact helplines
+        - If it is safe to travel from one location to another
+        - Item (for general items that don't fit other categories)                
       </promptString>
       <returnStruc>
         {
@@ -405,12 +403,7 @@
           "memory_request": "The memory request, if any"
         }
       </returnStruc>
-     </Prompt>
-
-
-
-
-
+			</Prompt>
     <Prompt ref="ItemMatchingPrompt">
       <promptString>
         The user is looking for some details about: {request.item_name} and the users query is: {request.query}.
@@ -703,46 +696,7 @@
       </returnStruc>
     </Prompt>
   </Item>
-
-  <Statistics>
-    <Prompt ref="DetectItemTypePrompt">
-      <promptString>
-        What is the kind of item the query is likely seeking with this query: {request.query}
-        
-        Common item types include:
-        - Recipe (for cooking, food preparation)
-        - Movie (for films, cinema)
-        - Product (for items to purchase)
-        - Restaurant (for dining establishments)
-        - Statistics (for demographic data, population statistics, economic indicators about places like counties, cities, states)
-        - Item (for general items that don't fit other categories)
-        
-        If the query is asking about statistical data like population, median income, demographics, or economic indicators for geographic locations, return "Statistics".
-      </promptString>
-      <returnStruc>
-        {
-          "item_type": ""
-        }
-      </returnStruc>
-    </Prompt>
-    
-    <Prompt ref="RankingPrompt">
-      <promptString>
-        Assign a score between 0 and 100 to the following statistical data point
-        based on how relevant it is to the user's question about demographic or economic indicators.
-        The user's question is: "{request.query}". 
-        The data point is: "{item.description}".
-      </promptString>
-      <returnStruc>
-        {
-          "score": "integer between 0 and 100",
-          "description": "short description of the data point"
-        }
-      </returnStruc>
-    </Prompt>
-  </Statistics>
   </Site>
-
   <!-- Site configuration for 'all' - searching across multiple sites -->
   <Site id="all">
     <Item>
@@ -880,5 +834,4 @@
       </Prompt>
     </Item>
   </Site>
-
 </root>
