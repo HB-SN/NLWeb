@@ -3,9 +3,7 @@
       xmlns:so="http://www.schema.org/"
       xmlns:rdfs="http://www.w3.org/rdfs">
 
-<!-- This file has all the prompts that are used in the process of running a query. -->
-
-  <Site id="sos-sms">
+<Site id="sos-sms">
     <Item>
 
     <Prompt ref="DetectIrrelevantQueryPrompt">
@@ -39,8 +37,7 @@
 
         The user's query is: {request.rawQuery}. 
         Previous queries were: {request.previousQueries}.
-       <!-- Previous answers (title + url)provided were: {request.prevAnswers}. -->
-      </promptString>
+       </promptString>
       <returnStruc>
         {
           "requires_decontextualization": "True or False",
@@ -90,6 +87,7 @@
         - Contain no more than 3 words
         - Focus on the most important keywords and concepts
         - Be diverse to cover different aspects of the original query
+        - If the query implies a need for help (e.g., medical or shelter), include keywords for both the condition/need and the provider/location.
         - Use only essential nouns, adjectives, or product terms
         - Avoid common words like "for", "the", "some", "are", "that", "would", "be"
         
@@ -110,14 +108,18 @@
     <Prompt ref="DetectMultiItemTypeQueryPrompt">
       <promptString>
         Analyze the following query from the user.
-        Is the user asking for only one kind of item or are they asking for multiple kinds of items.
-        If they are asking for multiple kinds of items, construct independent queries for each of the 
-        kinds of items, separated by semicolons. The user's query is: {request.query}.
+        Determine if the user is asking for one item or if multiple related items are logically necessary to provide a helpful answer.
+        
+        Crucial: If a user describes a problem, health issue, or emergency, you MUST treat this as a multi-item query. Generate independent queries for:
+        1. The description/nature of the issue (e.g., MedicalCondition).
+        2. The location or service that can provide help (e.g., Hospital, Clinic, EmergencyService).
+        
+        The user's query is: {request.query}.
       </promptString>
       <returnStruc>
         {
           "single_item_type_query": "True or False",
-          "item_queries": "Separate queries for each of the kinds of items, separated by commas"
+          "item_queries": "Separate queries for each of the kinds of items, separated by semicolons"
         }
       </returnStruc>
     </Prompt>
@@ -128,11 +130,16 @@
         
         Common item types include:
         - Emergency shelter and emergency accommodation
-        - Where to find medical care, such as hospitals, clinics and emergency aid stations
-        - Where to find water and food
-        - How to contact helplines
-        - If it is safe to travel from one location to another
-        - Item (for general items that don't fit other categories)                
+        - Medical care (hospitals, clinics, and emergency aid stations)
+        - Medical conditions (symptoms, diseases, treatments)
+        - Water and food locations
+        - Contact helplines
+        - Travel safety/status
+        - Item (for general items)
+        
+        If the query involves a health problem, prioritize returning both 'MedicalCondition' and 'EmergencyService' or 'CivicStructure'.
+        If the query involves a need for shelter, prioritize returning 'Accommodation'
+        If the query involves a need for food or water, prioritize returning 'Event' or 'SpecialAnnouncement' for food/water distribution events
       </promptString>
       <returnStruc>
         {
@@ -211,17 +218,19 @@
         }
       </returnStruc>
     </Prompt>
-     
-    
+       
     <Prompt ref="SynthesizePromptForGenerate">
       <promptString>
         Given the following items, synthesize an answer to the user's question. 
-        You do not need to include all the items, but you should include the most relevant ones.
+        Ensure the answer is helpful and logically complete: if a health issue or emergency is identified, include both information about the condition and the address/name of a nearby facility (Hospital, Clinic, or Shelter) that can help.
+        
         For each of the items included in the answer, provide the URL of the item in 
         the 'urls' field of the structured output. Make sure to include 
         the URL for every one of the items. Do not include the URL in the answer field.
+        
         Important: we are sending this over SMS, so keep the answer very concise and most useful information only. Ideally max 160 characters.
-        Important: you must answer in the same language as the user's query. If the user's query is in a language other than English, you should answer in that language. Do not answer in English if the user's query is in another language.        
+        Important: you must answer in the same language as the user's query. 
+        
         The user's question is: {request.query}.
         The items are: {request.answers}.
       </promptString>
@@ -328,43 +337,6 @@
         }
       </returnStruc>
     </Prompt>
-
-    
-    
-    <Prompt ref="CompareItemsPrompt">
-      <promptString>
-      The user is looking for a comparison between two items with the following descriptions:
-      Item 1: {request.item1_description} 
-      vs
-      Item 2: {request.item2_description} 
-      The user is asking for the following details: {request.details_requested}
-      Provide a comparison of the two items, highlighting the differences and similarities.
-      The user's query is: {request.query}.
-      </promptString>
-      <returnStruc>
-        {
-          "comparison": "Comparison of the two items"
-        }
-      </returnStruc>
-    </Prompt>
-
-    <Prompt ref="CompareItemDetailsPrompt">
-      <promptString>
-      The user is looking for a comparison between two items with the following descriptions:
-      Item 1: {request.item1_description} 
-      and
-      Item 2: {request.item2_description} 
-      The user is asking for the following details: {request.details_requested}
-      Provide a comparison of the two items, highlighting the differences and similarities.
-      The user's query is: {request.query}.
-      </promptString>
-      <returnStruc>
-        {
-          "comparison": "Comparison of the two items"
-        }
-      </returnStruc>
-    </Prompt>
-
   </Item>
   <Item>
     <Prompt ref="EnsembleBasePrompt">
