@@ -17,7 +17,7 @@ tool_selection_enabled: true
 
 # Enable or disable memory functionality
 # When set to false, the system will not analyze queries for memory requests
-memory_enabled: true
+memory_enabled: false
 
 # Enable or disable query analysis
 # When set to false, the system will skip item type detection, multi-item type detection, and query type detection

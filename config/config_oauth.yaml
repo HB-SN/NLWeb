@@ -13,7 +13,7 @@ providers:
     scope: email public_profile
 
   github:
-    enabled: true
+    enabled: false
     client_id_env: GITHUB_CLIENT_ID
     client_secret_env: GITHUB_CLIENT_SECRET
     auth_url: https://github.com/login/oauth/authorize
@@ -23,7 +23,7 @@ providers:
     scope: read:user user:email
   
   google:
-    enabled: true
+    enabled: false
     client_id_env: GOOGLE_OAUTH_CLIENT_ID
     client_secret_env: GOOGLE_OAUTH_CLIENT_SECRET
     auth_url: https://accounts.google.com/o/oauth2/v2/auth

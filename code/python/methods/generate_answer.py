@@ -50,11 +50,10 @@ class GenerateAnswer(NLWebHandler):
             await self.prepare()
             if (self.query_done):
                 logger.info("Query done prematurely")
-                return self.return_value
-            await self.get_ranked_answers()
-            self.return_value["conversation_id"] = self.conversation_id
+                return
+            await self.get_ranked_answers()            
             logger.info(f"Query execution completed for conversation_id: {self.conversation_id}")
-            return self.return_value
+            return [msg.to_dict() for msg in self.messages]
         except Exception as e:
             logger.exception(f"Error in runQuery: {e}")
             traceback.print_exc()
