@@ -112,7 +112,9 @@
         
         Crucial: If a user describes a problem, health issue, or emergency, you MUST treat this as a multi-item query. Generate independent queries for:
         1. The description/nature of the issue (e.g., MedicalCondition).
-        2. The location or service that can provide help (e.g., Hospital, Clinic, EmergencyService).
+        2. The address of the service that can provide help (e.g., Hospital, Clinic, EmergencyService).
+
+        Crucial: Always check for related SpecialAnnouncements or Events that might be relevant to the user's query, even if the user doesn't explicitly ask for them. If there are relevant SpecialAnnouncements or Events, this should also be treated as a multi-item query.
         
         The user's query is: {request.query}.
       </promptString>
@@ -140,6 +142,7 @@
         If the query involves a health problem, prioritize returning both 'MedicalCondition' and 'EmergencyService' or 'CivicStructure'.
         If the query involves a need for shelter, prioritize returning 'Accommodation'
         If the query involves a need for food or water, prioritize returning 'Event' or 'SpecialAnnouncement' for food/water distribution events
+        If the query involves a need for a ContactPoint, prioritize returning the telephone number
       </promptString>
       <returnStruc>
         {
@@ -222,15 +225,17 @@
     <Prompt ref="SynthesizePromptForGenerate">
       <promptString>
         Given the following items, synthesize an answer to the user's question. 
-        Ensure the answer is helpful and logically complete: if a health issue or emergency is identified, include both information about the condition and the address/name of a nearby facility (Hospital, Clinic, or Shelter) that can help.
-        
+                
         For each of the items included in the answer, provide the URL of the item in 
         the 'urls' field of the structured output. Make sure to include 
         the URL for every one of the items. Do not include the URL in the answer field.
         
-        Important: we are sending this over SMS, so keep the answer very concise and most useful information only. Ideally max 160 characters.
+        Important: we are sending this over SMS, so keep the answer very concise and most useful information only. Ideally max 320 characters.
         Important: you must answer in the same language as the user's query. 
-        
+        Important: you must ensure the answer is helpful and logically complete. For example, if a health issue identified, include both information about the condition and the address/name of a nearby facility (Hospital, Clinic, or Shelter) that can help.
+        Important: If a ContactPoint with a telephone number is relevant, include that in the answer.
+        Important: Never include pleasentries or unnecessary information that doesn't directly help answer the user's question. For example, don't include "I hope this helps!" or "Here is what I found:" or any similar language. Just provide the answer directly.
+                      
         The user's question is: {request.query}.
         The items are: {request.answers}.
       </promptString>
@@ -337,233 +342,6 @@
         }
       </returnStruc>
     </Prompt>
-  </Item>
-  <Item>
-    <Prompt ref="EnsembleBasePrompt">
-      <promptString>
-        Based on the user's request: "{request.query}"
-
-        I searched for: {ensemble.queries}
-
-        Here are the search results:
-        {ensemble.results}
-
-        Please create a cohesive recommendation that addresses the user's request.
-      </promptString>
-      <returnStruc>
-        {
-          "theme": "Brief description of the overall recommendation theme",
-          "items": [
-            {
-              "category": "Category name (e.g., Appetizer, Museum, Footwear)",
-              "name": "Specific item name", 
-              "description": "Detailed description",
-              "why_recommended": "Why this item fits the request",
-              "details": {}
-            }
-          ],
-          "overall_tips": ["Any general tips or considerations"]
-        }
-      </returnStruc>
-    </Prompt>
-
-    <Prompt ref="EnsembleMealPlanningPrompt">
-      <promptString>
-        Based on the user's request: "{request.query}"
-
-        I searched for: {ensemble.queries}
-
-        Here are the search results:
-        {ensemble.results}
-
-        Create a complete meal recommendation with:
-        1. Appetizer/Starter
-        2. Main Course
-        3. Dessert
-
-        For each course, provide:
-        - Name of the dish
-        - Brief description
-        - Why it complements the other courses
-        - Any relevant details (prep time, difficulty, dietary info)
-        - URL of the item
-
-        Include the URL of the item in the 'url' field of the structured output.
-
-        Ensure the courses work well together in terms of flavors, textures, and overall dining experience.
-      </promptString>
-      <returnStruc>
-        {
-          "theme": "Brief description of the meal theme",
-          "items": [
-            {
-              "category": "Course type (Appetizer, Main Course, or Dessert)",
-              "name": "Specific dish name",
-              "description": "Detailed description of the dish",
-              "why_recommended": "Why this dish fits the meal",
-              "url": "URL of the item",
-              "details": {
-                "prep_time": "Preparation time",
-                "difficulty": "Easy/Medium/Hard",
-                "dietary_info": "Any dietary considerations"
-              }
-            }
-          ],
-          "overall_tips": ["Tips for preparing or serving the meal"]
-        }
-      </returnStruc>
-    </Prompt>
-
-    <Prompt ref="EnsembleTravelItineraryPrompt">
-      <promptString>
-        Based on the user's request: "{request.query}"
-
-        I searched for: {ensemble.queries}
-
-        Here are the search results:
-        {ensemble.results}
-
-        Create a travel itinerary recommendation with:
-        1. Attractions/Museums to visit
-        2. Nearby restaurants for meals
-        3. Suggested order/timing
-
-        For each recommendation, provide:
-        - Name and location
-        - Why it's worth visiting
-        - Time needed
-        - How it connects to other recommendations
-        - Any practical tips (hours, tickets, reservations)
-        - URL of the item
-
-        Include the URL of the item in the 'url' field of the structured output.
-      </promptString>
-      <returnStruc>
-        {
-          "theme": "Brief description of the itinerary theme",
-          "items": [
-            {
-              "category": "Category (Attraction, Museum, Restaurant, etc.)",
-              "name": "Specific venue name",
-              "description": "Detailed description",
-              "why_recommended": "Why this fits the itinerary",
-              "url": "URL of the item",
-              "details": {
-                "location": "Address or area",
-                "time_needed": "Estimated duration",
-                "best_time": "Recommended time to visit",
-                "tickets": "Ticket information if applicable",
-                "reservations": "Reservation requirements"
-              }
-            }
-          ],
-          "overall_tips": ["General tips for the itinerary"]
-        }
-      </returnStruc>
-    </Prompt>
-
-    <Prompt ref="EnsembleOutfitPrompt">
-      <promptString>
-        Based on the user's request: "{request.query}"
-
-        I searched for: {ensemble.queries}
-
-        Here are the search results, each with a URL:
-        {ensemble.results}
-
-        Create a complete outfit recommendation with:
-        1. Essential items (footwear, jacket, base layers)
-        2. Accessories
-        3. Additional considerations
-
-        For each item, provide:
-        - Specific type recommended
-        - Why it's suitable for the conditions
-        - Key features to look for
-        - URL of the item
-        - Any alternatives
-
-        Include the URL of the item in the 'url' field of the structured output.
-
-        Consider weather, activity level, and safety.
-      </promptString>
-      <returnStruc>
-        {
-          "theme": "Brief description of the outfit purpose",
-          "items": [
-            {
-              "category": "Category (Footwear, Jacket, Accessories, etc.)",
-              "name": "Specific item type",
-              "description": "Detailed description",
-              "why_recommended": "Why this item is suitable",
-              "url": "URL of the item",
-              "details": {
-                "key_features": "Important features to look for",
-                "alternatives": "Alternative options",
-                "weather_suitability": "How it handles weather conditions",
-                "activity_level": "Suitable activity level"
-              }
-            }
-          ],
-          "overall_tips": ["General outfit tips and safety considerations"]
-        }
-      </returnStruc>
-    </Prompt>
-
-    <Prompt ref="EnsembleGenericPrompt">
-      <promptString>
-        Based on the user's request: "{request.query}"
-
-        I searched for: {ensemble.queries}
-
-        Here are the search results:
-        {ensemble.results}
-
-        Create a cohesive set of recommendations that work well together.
-        For each item, explain why it's recommended and how it complements the other items.
-        Include the URL of the item in the 'url' field of the structured output.
-      </promptString>
-      <returnStruc>
-        {
-          "theme": "Brief description of the recommendation theme",
-          "items": [
-            {
-              "category": "Item category",
-              "name": "Specific item name",
-              "description": "Detailed description",
-              "why_recommended": "Why this item fits the request",
-              "url": "URL of the item",
-              "details": {}
-            }
-          ],
-          "overall_tips": ["General tips or considerations"]
-        }
-      </returnStruc>
-    </Prompt>
-
-    <Prompt ref="EnsembleItemRankingPrompt">
-      <promptString>
-        Given the user's query: "{request.query}"
-
-        And this item:
-        Name: {item.name}
-        Type: {item.type}
-        Description: {item.description}
-
-        Rate how relevant this item is for answering the user's query on a scale of 0-100.
-        Consider:
-        - Does this item directly address what the user is looking for?
-        - Is it the right type of item (e.g., restaurant vs attraction)?
-        - Does it match any specific criteria mentioned in the query?
-
-        Provide your response as a JSON object with a 'score' field containing the relevance score.
-      </promptString>
-      <returnStruc>
-        {
-          "score": "integer between 0 and 100"
-        }
-      </returnStruc>
-    </Prompt>
-  </Item>
+  </Item> 
   </Site>
 </root>

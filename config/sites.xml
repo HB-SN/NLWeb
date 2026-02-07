@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Sites>
-  <Site name="sms">
+  <Site name="sos-sms">
     <itemType>https://schema.org/Accommodation</itemType>
     <itemType>https://schema.org/CivicStructure</itemType>
     <itemType>https://schema.org/ContactPoint</itemType>
