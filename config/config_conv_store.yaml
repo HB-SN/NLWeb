@@ -80,7 +80,7 @@ storage_endpoints:
     vector_dimensions: 1536
 
   qdrant_local:
-    enabled: true
+    enabled: false
     type: qdrant
     # Local file-based storage path
     database_path: "../data/conversations_db"
