@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Sites>
-<?xml version="1.0" encoding="UTF-8"?>
-<Sites>
-  <Site name="5wvmo1g7lp92">
-    <itemType>https://schema.org/EmergencyService</itemType>
+  <Site name="sos-sms">
     <itemType>https://schema.org/Accommodation</itemType>
     <itemType>https://schema.org/CivicStructure</itemType>
-    <itemType>https://schema.org/ClaimReview</itemType>
     <itemType>https://schema.org/ContactPoint</itemType>
-    <itemType>https://schema.org/MedicalCondition</itemType>
-    <itemType>https://schema.org/Event</itemType>
+    <itemType>https://schema.org/EmergencyService</itemType>
+    <itemType>https://schema.org/Event</itemType>            
+    <itemType>https://schema.org/MedicalCondition</itemType>    
     <itemType>https://schema.org/SpecialAnnouncement</itemType>
     <description>Survivor information - comprehensive information for survivors of emergencies and disasters</description>
   </Site>
