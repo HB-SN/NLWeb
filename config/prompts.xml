@@ -1,347 +1,450 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<root xmlns="http://nlweb.ai/base"
-      xmlns:so="http://www.schema.org/"
-      xmlns:rdfs="http://www.w3.org/rdfs">
-
-<Site id="sos-sms">
-    <Item>
-
-    <Prompt ref="DetectIrrelevantQueryPrompt">
-      <promptString>
-        The user is querying the site {request.site} which has information about {site.itemType}s.
-        Is the site utterly completely irrelevant to the user's query? 
-        The question is not whether this is the best site for answering the query, 
-        but if there is nothing on the site that is likely to be relevant for the query. 
-        If the site is irrelevant, add an explanation for why it is irrelevant. Otherwise, leave that field blank.
-        The user query is: '{request.query}'
+<root
+	xmlns="http://nlweb.ai/base"
+	xmlns:so="http://www.schema.org/"
+	xmlns:rdfs="http://www.w3.org/rdfs">
+	<Site id="sos-sms">
+		<Item>
+			<Prompt ref="DetectIrrelevantQueryPrompt">
+				<promptString>
+        The user is querying a site containing only: Accommodation, CivicStructure, ContactPoint, EmergencyService, Event, MedicalCondition, and SpecialAnnouncement.
+        Is the query '{request.query}' utterly irrelevant to these specific categories?
+        If irrelevant, provide a reason. Otherwise, leave blank.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "site_is_irrelevant_to_query": "True or False",
           "explanation_for_irrelevance": "Explanation for why the site is irrelevant"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="PrevQueryDecontextualizer">
-      <promptString>
-        The user is querying the site {request.site} which has {site.itemType}s.
-        Rewrite the query, incorporating the context of the previous queries and answers.
-        Keep the decontextualized query short and do not reference the site. 
-
-        If the query very clearly does not reference earlier queries, 
-        don't change the query. Err on the side of incorporating the context of the 
-        previous queries. If you are not sure whether this is a brand new query, 
-        or follow up, it is likely a follow up. Try your best to incorporate the 
-        context from the previous queries.
-
-        The user's query is: {request.rawQuery}. 
-        Previous queries were: {request.previousQueries}.
-       </promptString>
-      <returnStruc>
+			</Prompt>
+			<Prompt ref="PrevQueryDecontextualizer">
+				<promptString>
+        Rewrite the query '{request.rawQuery}' by incorporating context from previous queries: {request.previousQueries}.
+        Keep it short. If it is a follow-up (err on the side of it being one), ensure the new query is self-contained.
+      </promptString>
+				<returnStruc>
         {
           "requires_decontextualization": "True or False",
-          "decontextualized_query": "The rewritten query, if decontextualization is required"
+          "decontextualized_query": "The rewritten query"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="DecontextualizeContextPrompt">
-      <promptString>
-        The user is asking the following question: '{request.rawQuery}' in the context of 
-        the an item with the following description: {request.contextDescription}. 
-        Previous answers provided were: {request.prevAnswers}.
-        Rewrite the query to decontextualize it so that it can be answered 
-        without reference to earlier queries, previous answers, or to the item description.
+			</Prompt>
+			<Prompt ref="DecontextualizeContextPrompt">
+				<promptString>
+        Rewrite the question '{request.rawQuery}' to be independent of the following item: {request.contextDescription} and previous answers: {request.prevAnswers}.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "decontextualized_query": "The rewritten query"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="FullDecontextualizePrompt">
-      <promptString>
-        The user is asking the following question: '{request.rawQuery}' in the context of 
-        the an item with the following description: {request.contextDescription}. 
-        Previous queries from the user were: {request.previousQueries}.
-        Previous answers provided were: {request.prevAnswers}.
-        Rewrite the query to decontextualize it so that it can be answered 
-        without reference to earlier queries, previous answers, or to the item description.
+			</Prompt>
+			<Prompt ref="FullDecontextualizePrompt">
+				<promptString>
+        Rewrite '{request.rawQuery}' to be independent of previous queries {request.previousQueries}, answers {request.prevAnswers}, and description {request.contextDescription}.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "decontextualized_query": "The rewritten query"
         }
       </returnStruc>
-    </Prompt>
-    
-    <Prompt ref="QueryRewrite">
-      <promptString>
-        You are helping to rewrite a complex search query into simpler keyword queries for a traditional keyword-based search engine.
-        The search engine works best with short, focused queries containing important keywords.
-        
-        Take the following query and break it down into up to 5 simpler search queries.
-        Each query should:
-        - Contain no more than 3 words
-        - Focus on the most important keywords and concepts
-        - Be diverse to cover different aspects of the original query
-        - If the query implies a need for help (e.g., medical or shelter), include keywords for both the condition/need and the provider/location.
-        - Use only essential nouns, adjectives, or product terms
-        - Avoid common words like "for", "the", "some", "are", "that", "would", "be"
-        
-        For example:
-        - "what are some options for plates that would be appropriate for serving vegetables" → ["vegetable plates", "serving plates", "dinner plates", "salad plates", "ceramic plates"]
-        - "looking for a tea pot that can brew green tea" → ["tea pot", "green tea", "teapot ceramic", "japanese teapot", "brewing pot"]
-        
-        The original query is: {request.query}
+			</Prompt>
+			<Prompt ref="DetectMemoryRequestPrompt">
+				<promptString>
+        Is the user explicitly asking to remember something for future queries? '{request.rawQuery}'.
+        If so, identify the memory request clearly and concisely.
       </promptString>
-      <returnStruc>
+				<returnStruc>
+        {
+          "is_memory_request": "True or False",
+          "memory_request": "The memory request, if any"
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="QueryRewrite">
+				<promptString>
+        Break the query '{request.query}' into up to 5 simple keyword search queries (max 3 words each).
+        Focus on Accommodation, CivicStructure, ContactPoint, EmergencyService, Event, MedicalCondition, or SpecialAnnouncement.
+      </promptString>
+				<returnStruc>
         {
           "rewritten_queries": ["query1", "query2", "query3", "query4", "query5"],
-          "query_count": "Number of queries generated (1-5)"
+          "query_count": "Number of queries generated"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="DetectMultiItemTypeQueryPrompt">
-      <promptString>
-        Analyze the following query from the user.
-        Determine if the user is asking for one item or if multiple related items are logically necessary to provide a helpful answer.
-        
-        Crucial: If a user describes a problem, health issue, or emergency, you MUST treat this as a multi-item query. Generate independent queries for:
-        1. The description/nature of the issue (e.g., MedicalCondition).
-        2. The address of the service that can provide help (e.g., Hospital, Clinic, EmergencyService).
-
-        Crucial: Always check for related SpecialAnnouncements or Events that might be relevant to the user's query, even if the user doesn't explicitly ask for them. If there are relevant SpecialAnnouncements or Events, this should also be treated as a multi-item query.
-        
-        The user's query is: {request.query}.
+			</Prompt>
+			<Prompt ref="DetectMultiItemTypeQueryPrompt">
+				<promptString>
+        Is the user asking for multiple types of items (e.g., an Event and a nearby Accommodation)? 
+        Query: '{request.query}'. If so, separate into independent queries by semicolons.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "single_item_type_query": "True or False",
-          "item_queries": "Separate queries for each of the kinds of items, separated by semicolons"
+          "item_queries": "Separate queries"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="DetectItemTypePrompt">
-      <promptString>
-        What is the kind of item the query is likely seeking with this query: {request.query}
-        
-        Common item types include:
-        - Emergency shelter and emergency accommodation
-        - Medical care (hospitals, clinics, and emergency aid stations)
-        - Medical conditions (symptoms, diseases, treatments)
-        - Water and food locations
-        - Contact helplines
-        - Travel safety/status
-        - Item (for general items)
-        
-        If the query involves a health problem, prioritize returning both 'MedicalCondition' and 'EmergencyService' or 'CivicStructure'.
-        If the query involves a need for shelter, prioritize returning 'Accommodation'
-        If the query involves a need for food or water, prioritize returning 'Event' or 'SpecialAnnouncement' for food/water distribution events
-        If the query involves a need for a ContactPoint, prioritize returning the telephone number
+			</Prompt>
+			<Prompt ref="DetectItemTypePrompt">
+				<promptString>
+        Identify the item type for: {request.query}. 
+        Must map to: Accommodation, CivicStructure, ContactPoint, EmergencyService, Event, MedicalCondition, or SpecialAnnouncement.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "item_type": ""
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="DetectQueryTypePrompt">
-      <promptString>
-        Analyze the following query from the user. 
-        Is the user asking for a list of {site.itemType} that match a certain description or are they asking for the
-        details of a particular {site.itemType}?
-        If the user for the details of a particular {site.itemType}, what is the name of the {site.itemType} and what
-        details are they asking for? The user's query is: {request.query}.
+			</Prompt>
+			<Prompt ref="DetectQueryTypePrompt">
+				<promptString>
+        Is '{request.query}' asking for a list or specific details of a {site.itemType}? 
+        Identify the name and specific details requested.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "item_details_query": "True or False",
-          "item_title": "The title of the item type, if any",
-          "details_being_asked": "what details the user is asking for"
+          "item_title": "Title",
+          "details_being_asked": "Details"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="RankingPromptWithExplanation">
-      <promptString>
-        Assign a score between 0 and 100 to the following {site.itemType}
-        based on how relevant it is to the user's question. Use your knowledge from other sources, about the item, to make a judgement.
-        Provide a short description of the item that is relevant to the user's question, without mentioning the user's question.
-        Provide an explanation of the relevance of the item to the user's question, without mentioning the user's question or the score or explicitly mentioning the term relevance.
-        If the score is below 75, in the description, include the reason why it is still relevant.
-          
-        The user's question is: {request.query}. The item's description is {item.description}
+			</Prompt>
+			<Prompt ref="RankingPromptWithExplanation">
+				<promptString>
+        Score the {site.itemType} (0-100) for relevance to: {request.query}. 
+        Prioritize items that are geographically closest to the user's implied or stated location.
+        If a MedicalCondition is mentioned, prioritize CivicStructures that provide assistance.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
-          "score": "integer between 0 and 100",
-          "description": "short description of the item",
-          "explanation": "explanation of the relevance of the item to the user's question"
+          "score": "integer",
+          "description": "short description",
+          "explanation": "relevance explanation"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="RankingPrompt">
-      <promptString>
-        Assign a score between 0 and 100 to the following item
-        based on how relevant it is to the user's question. Use your knowledge from other sources, about the item, to make a judgement. 
-        If the score is above 50, provide a short description of the item highlighting the relevance to the user's question, without mentioning the user's question.
-        Provide an explanation of the relevance of the item to the user's question, without mentioning the user's question or the score or explicitly mentioning the term relevance.
-        If the score is below 75, in the description, include the reason why it is still relevant.
-          
-
-        The user's question is: \"{request.query}\". The item's description in schema.org format is \"{item.description}\".
-      </promptString>
-      <returnStruc>
-        {
-          "score": "integer between 0 and 100",
-          "description": "short description of the item"
-        }
-      </returnStruc>
-    </Prompt>
-
-    <Prompt ref="RankingPromptForGenerate">
-      <promptString>
-        Assign a score between 0 and 100 to the following item
-        based on useful it might be to answering the user's question. 
-        The user's question is: \"{request.query}\".
-        The item in schema.org format is: \"{item.description}\". Include a 
-        short description of the item in the description field.
-      </promptString>
-      <returnStruc>
-        {
-          "score" : "integer between 0 and 100",
-          "description" : "short description of the item"
-        }
-      </returnStruc>
-    </Prompt>
-       
-    <Prompt ref="SynthesizePromptForGenerate">
-      <promptString>
-        Given the following items, synthesize an answer to the user's question. 
-                
-        For each of the items included in the answer, provide the URL of the item in 
-        the 'urls' field of the structured output. Make sure to include 
-        the URL for every one of the items. Do not include the URL in the answer field.
+			</Prompt>
+	<Prompt ref="RankingPrompt">
+				<promptString>
+        Score this item (0-100) based on geographical proximity to "{request.query}".
         
-        Important: we are sending this over SMS, so keep the answer very concise and most useful information only. Ideally max 320 characters.
-        Important: you must answer in the same language as the user's query. 
-        Important: you must ensure the answer is helpful and logically complete. For example, if a health issue identified, include both information about the condition and the address/name of a nearby facility (Hospital, Clinic, or Shelter) that can help.
-        Important: If a ContactPoint with a telephone number is relevant, include that in the answer.
-        Important: Never include pleasentries or unnecessary information that doesn't directly help answer the user's question. For example, don't include "I hope this helps!" or "Here is what I found:" or any similar language. Just provide the answer directly.
-                      
-        The user's question is: {request.query}.
-        The items are: {request.answers}.
+        GEOGRAPHIC KNOWLEDGE:
+        1. Chhor is in Umerkot District. Samrasar and Hasisar are immediate neighbors to Chhor.
+        2. If an item is in Samrasar or Hasisar, it is the CLOSEST possible match for Chhor. Score it 100.
+        3. Tando Allahyar, Khairpur, and Umerkot City are further away and must score significantly lower (below 50).
+        4. Prioritize CivicStructures for MedicalConditions.
+        
+        Item Description: {item.description}
       </promptString>
-      <returnStruc>
+				<returnStruc>
+        {
+          "score": "integer",
+          "description": "short description"
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="RankingPromptForGenerate">
+				<promptString>
+        Score (0-100) how useful "{item.description}" is for answering "{request.query}".
+        Heavily weight proximity and connections between medical needs and helpful civic structures.
+      </promptString>
+				<returnStruc>
+        {
+          "score" : "integer",
+          "description" : "short description"
+        }
+      </returnStruc>
+			</Prompt>
+<Prompt ref="SynthesizePromptForGenerate">
+				<promptString>
+        Synthesize a single block of text (max 320 characters) in the same language as: "{request.query}".
+        
+        STRICT OUTPUT RULES:
+        - NEVER include URLs.
+        - NO REPETITION: Do not repeat the user's question or phrases like "I am in..." or "You are looking for...". Start directly with the answer.
+        - MANDATORY: Human-readable Address (No Geo/Coordinates) and Telephone.
+        - ABSOLUTE PROXIMITY: Use Geo Coordinates to determine the closest item. You must select the item with the smallest physical distance.         
+        - If a MedicalCondition is mentioned, include a related CivicStructure.
+        
+        Results to choose from: {request.answers}.
+      </promptString>
+				<returnStruc>
         {
           "answer" : "string",
-          "urls" : "urls of the items included in the answer"
+          "urls" : "for-backend-only"
         }
       </returnStruc>
-    </Prompt>
-
-     <Prompt ref="SummarizeResultsPrompt">
-      <promptString>
-        Given the following items, summarize the results as an answer to the user's question. `
-        The user's question is: {request.query}. 
-        The items are: {request.answers}.
+			</Prompt>
+	<Prompt ref="SummarizeResultsPrompt">
+				<promptString>
+        Summarize the closest result for "{request.query}". 
+        Max 320 chars, single block. Address and Phone are mandatory. 
+        Exclude URLs and Geo. 
+        If a village match (like Hasisar) exists, do not recommend a District capital.
+        Items: {request.answers}.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "summary" : "string"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="DescriptionPromptForGenerate">
-      <promptString>
-        The item with the following description is used to answer the user's question. 
-        Please provide a description of the item, in the context of the user's question
-        and the overall answer.
-        The user's question is: {request.query}.
-        The overall answer is: {request.answer}.
-        The item is: {item.description}.
+			</Prompt>
+			<Prompt ref="DescriptionPromptForGenerate">
+				<promptString>
+        Describe this item regarding "{request.query}". 
+        Focus on location/contact details. Max 320 characters. No URLs.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "description" : "string"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="ItemMatchingPrompt">
-      <promptString>
-        The user is looking for some details about: {request.item_name}
-        
-        Assign a score between 0 and 100 for whether the following item description
-        matches what the user is looking for. A score of 100 means this is exactly
-        the item they want, 0 means it's completely unrelated.
-
-        If the score is above 75, also extract the details that the user is looking for.
-        Include only the details that the user is explicitly asking for.
-
-        The details requested are: {request.details_requested}. 
-        
-        Item description: {item.description}
+			</Prompt>
+			<Prompt ref="ItemMatchingPrompt">
+				<promptString>
+        Does "{item.description}" match "{request.item_name}"? 
+        Score 0-100. If more than 75, extract requested details (Address/Phone).
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
-          "score": "integer between 0 and 100",
-          "item_details": "the specific details requested by the user"
+          "score": "integer",
+          "item_details": "details"
         }
       </returnStruc>
-    </Prompt>
-
-    <Prompt ref="ExtractItemDetailsPrompt">
-      <promptString>
-        The user is requesting specific details about an item they previously saw.
-        
-        The user's query: {request.query}
-        The details requested: {request.details_requested}
-        
-        From the following item description, extract ONLY the specific details the user is asking for.
-        Be comprehensive but focused - include all relevant information for what they asked, but don't include unrelated details.
-        
-        For example:
-        - If they ask for "ingredients", include the full ingredients list
-        - If they ask for "price", include price and any pricing variations
-        - If they ask for "nutrition", include all nutritional information
-        - If they ask for "description", provide a clear summary of the item
-        - If they ask for "instructions" or "how to make", include step-by-step instructions
-        
-        Item description: {item.description}
+			</Prompt>
+	<Prompt ref="ExtractItemDetailsPrompt">
+				<promptString>
+        Extract Name, Address (Text only, no Geo), and Telephone. 
+        Ensure proximity to "{request.query}" is the primary focus. 
+        Max 320 chars. Single block. No URLs.
+        Data: {item.description}
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
-          "item_name": "the name of the item",
-          "requested_details": "the specific details requested by the user, formatted clearly",
-          "additional_context": "any important context about these details (optional)"
+          "item_name": "name",
+          "requested_details": "details",
+          "additional_context": "context"
         }
       </returnStruc>
-    </Prompt>
-
-
-    <Prompt ref="FindItemPrompt"> 
-      <promptString>
-        The user is looking for for an item named / described as: {item.name}
-        Assign a score between 0 and 100 for whether the following item description
-        matches the items the user is looking for. A score of 100 means this is exactly
-        the item they want, 0 means it's completely unrelated.
-        Item description: {item.description}
+			</Prompt>
+			<Prompt ref="FindItemPrompt">
+				<promptString>
+        Score (0-100) if "{item.description}" matches "{item.name}". 
+        Prioritize items closest to the user's region.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
-          "score": "integer between 0 and 100"
+          "score": "integer"
         }
       </returnStruc>
-    </Prompt>
-  </Item> 
-  </Site>
+			</Prompt>
+			<Prompt ref="CompareItemsPrompt">
+				<promptString>
+        Compare these items for: "{request.query}". 
+        Max 320 chars, no URLs. Language: same as query. Include addresses/phones.
+        Item 1: {request.item1_description} vs Item 2: {request.item2_description}.
+      </promptString>
+				<returnStruc>
+        {
+          "comparison": "Comparison text"
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="CompareItemDetailsPrompt">
+				<promptString>
+        Compare details for: "{request.query}". 
+        Single block, max 320 chars, no URLs. Include Address/Telephone.
+        Item 1: {request.item1_description} vs Item 2: {request.item2_description}.
+      </promptString>
+				<returnStruc>
+        {
+          "comparison": "Comparison text"
+        }
+      </returnStruc>
+			</Prompt>
+		</Item>
+		<Recipe>
+			<Prompt ref="DetectMemoryRequestPrompt">
+				<promptString>
+        Note: Site only supports MedicalCondition/CivicStructure. 
+        Is the user asking to remember a constraint (e.g. accessibility/medical) for future queries?
+        Query: {request.rawQuery}.
+      </promptString>
+				<returnStruc>
+        {
+          "is_memory_request": "True or False",
+          "memory_request": "The memory request"
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="ItemMatchingPrompt">
+				<promptString>
+        Match item for: {request.query}. Max 320 chars, no URLs. 
+        Include Address/Telephone. Match against allowed schemas only.
+      </promptString>
+				<returnStruc>
+        {
+          "score": "integer",
+          "item_details": "details"
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="RankingPrompt">
+				<promptString>
+        Rank item relevance to "{request.query}". 
+        Score significantly lower if not Accommodation, CivicStructure, ContactPoint, EmergencyService, Event, MedicalCondition, or SpecialAnnouncement.
+      </promptString>
+				<returnStruc>
+        {
+          "score": "integer",
+          "description": "description"
+        }
+      </returnStruc>
+			</Prompt>
+		</Recipe>
+		<RealEstate>
+			<Prompt ref="RequiredInfoPrompt">
+				<promptString>
+        Does the query "{request.query}" provide the necessary location for proximity ranking? 
+      </promptString>
+				<returnStruc>
+        {
+          "required_info_found": "True or False",
+          "user_question": "Question"
+        }
+      </returnStruc>
+			</Prompt>
+		</RealEstate>
+		<Item>
+			<Prompt ref="EnsembleBasePrompt">
+				<promptString>
+        Synthesize a single block response (max 320 chars, same language, no URLs). 
+        Prioritize the closest items. Include Address/Telephone. 
+        Link MedicalConditions to assisting CivicStructures.
+        Query: "{request.query}". Results: {ensemble.results}
+      </promptString>
+				<returnStruc>
+        {
+          "theme": "theme",
+          "items": [
+            {
+              "category": "category",
+              "name": "name", 
+              "description": "description",
+              "why_recommended": "reason",
+              "details": {}
+            }
+          ],
+          "overall_tips": ["tips"]
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="EnsembleMealPlanningPrompt">
+				<promptString>
+        Note: Site focuses on Accommodation/CivicStructure. 
+        Create recommendations (max 320 chars, single block, no URLs). 
+        Prioritize proximity and include Addresses/Telephones.
+      </promptString>
+				<returnStruc>
+        {
+          "theme": "theme",
+          "items": [
+            {
+              "category": "category",
+              "name": "name",
+              "description": "description",
+              "why_recommended": "reason",
+              "url": "internal-use-only",
+              "details": {}
+            }
+          ],
+          "overall_tips": ["tips"]
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="EnsembleTravelItineraryPrompt">
+				<promptString>
+        Create an itinerary using CivicStructures/Events/Accommodation (max 320 chars, single block, no URLs). 
+        Include addresses/phones. Prioritize closest options first.
+        Query: "{request.query}". Results: {ensemble.results}
+      </promptString>
+				<returnStruc>
+        {
+          "theme": "theme",
+          "items": [
+            {
+              "category": "category",
+              "name": "name",
+              "description": "description",
+              "why_recommended": "reason",
+              "url": "internal-use-only",
+              "details": {
+                "location": "Address",
+                "time_needed": "duration"
+              }
+            }
+          ],
+          "overall_tips": ["tips"]
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="EnsembleOutfitPrompt">
+				<promptString>
+        Note: Items must be from site schemas. 
+        Recommend related Accommodation/Events (max 320 chars, single block, no URLs). 
+        Include Address/Telephone. Prioritize proximity.
+      </promptString>
+				<returnStruc>
+        {
+          "theme": "theme",
+          "items": [
+            {
+              "category": "category",
+              "name": "name",
+              "description": "description",
+              "why_recommended": "reason",
+              "url": "internal-use-only",
+              "details": {}
+            }
+          ],
+          "overall_tips": ["tips"]
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="EnsembleGenericPrompt">
+				<promptString>
+        Synthesize a response for: "{request.query}". 
+        Same language, max 320 chars, single block, no URLs. 
+        Include Address/Telephone. Prioritize the closest results.
+      </promptString>
+				<returnStruc>
+        {
+          "theme": "theme",
+          "items": [
+            {
+              "category": "category",
+              "name": "name",
+              "description": "description",
+              "why_recommended": "reason",
+              "url": "internal-use-only",
+              "details": {}
+            }
+          ],
+          "overall_tips": ["tips"]
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="EnsembleItemRankingPrompt">
+				<promptString>
+        Score (0-100) relevance of "{item.name}" to "{request.query}". 
+        Prioritize items geographically closest to the user.
+      </promptString>
+				<returnStruc>
+        {
+          "score": "integer"
+        }
+      </returnStruc>
+			</Prompt>
+		</Item>
+	</Site>
 </root>
