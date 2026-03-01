@@ -73,7 +73,7 @@
         Rewrite the query to decontextualize it so that it can be answered 
         without reference to earlier queries, previous answers, or to the item description.
       </promptString>
-      <returnStruc>
+				<returnStruc>
         {
           "decontextualized_query": "The rewritten query"
         }
@@ -694,14 +694,50 @@
           "score": "integer between 0 and 100"
         }
       </returnStruc>
-    </Prompt>
-  </Item>
-  </Site>
-  <!-- Site configuration for 'all' - searching across multiple sites -->
-  <Site id="all">
-    <Item>
-      <Prompt ref="DetectIrrelevantQueryPrompt">
-        <promptString>
+			</Prompt>
+		</Item>
+		<Statistics>
+			<Prompt ref="DetectItemTypePrompt">
+				<promptString>
+        What is the kind of item the query is likely seeking with this query: {request.query}
+        
+        Common item types include:
+        - Recipe (for cooking, food preparation)
+        - Movie (for films, cinema)
+        - Product (for items to purchase)
+        - Restaurant (for dining establishments)
+        - Statistics (for demographic data, population statistics, economic indicators about places like counties, cities, states)
+        - Item (for general items that don't fit other categories)
+        
+        If the query is asking about statistical data like population, median income, demographics, or economic indicators for geographic locations, return "Statistics".
+      </promptString>
+				<returnStruc>
+        {
+          "item_type": ""
+        }
+      </returnStruc>
+			</Prompt>
+			<Prompt ref="RankingPrompt">
+				<promptString>
+        Assign a score between 0 and 100 to the following statistical data point
+        based on how relevant it is to the user's question about demographic or economic indicators.
+        The user's question is: "{request.query}". 
+        The data point is: "{item.description}".
+      </promptString>
+				<returnStruc>
+        {
+          "score": "integer between 0 and 100",
+          "description": "short description of the data point"
+        }
+      </returnStruc>
+			</Prompt>
+		</Statistics>
+	</Site>
+	<!-- Site configuration for 'all' - searching across multiple sites -->
+	<Site id="all">
+		<Item>
+			<Prompt ref="DetectIrrelevantQueryPrompt">
+				<promptString>
           The user is searching across ALL sites for: '{request.query}'
           
           Since we're searching across all sites, very few queries would be truly irrelevant.
