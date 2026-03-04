@@ -9,6 +9,7 @@ WARNING: This code is under development and may undergo changes in future releas
 Backwards compatibility is not guaranteed at this time.
 """
 
+import aiohttp
 import asyncio
 from core.baseHandler import NLWebHandler
 from core.llm import ask_llm
@@ -18,13 +19,14 @@ from core.prompts import find_prompt, fill_prompt
 from core.utils.json_utils import trim_json, trim_json_hard
 from misc.logger.logging_config_helper import get_configured_logger
 from core.utils.utils import log
+from typing import Dict, List, Optional, Tuple, Any
 import core.query_analysis.analyze_query as analyze_query
 import core.query_analysis.relevance_detection as relevance_detection
 import core.query_analysis.memory as memory
 import core.query_analysis.required_info as required_info
 import json
 import traceback
-
+import os
 
 logger = get_configured_logger("generate_answer")
 
@@ -32,8 +34,12 @@ logger = get_configured_logger("generate_answer")
 class GenerateAnswer(NLWebHandler):
 
     GATHER_ITEMS_THRESHOLD = 55
-
+    DISTANCE_RANKING_THRESHOLD = 100
+     
     RANKING_PROMPT_NAME = "RankingPromptForGenerate"
+    DISTANCE_RANKING_PROMPT_NAME = "DistanceRankingPromptForGenerate"
+
+    SYNTHESIZE_PROMPT_NAME_NO_LOCATION = "SynthesizePromptForGenerateNoLocation"
     SYNTHESIZE_PROMPT_NAME = "SynthesizePromptForGenerate"
     DESCRIPTION_PROMPT_NAME = "DescriptionPromptForGenerate"
 
@@ -43,6 +49,17 @@ class GenerateAnswer(NLWebHandler):
         self._results_lock = asyncio.Lock()  # Add lock for thread-safe operations
         logger.info(f"GenerateAnswer initialized with query_params: {query_params}")
         log(f"GenerateAnswer query_params: {query_params}")
+
+        self.azure_maps_api_key = os.environ["AZURE_MAPS_API_KEY"] 
+        self.azure_maps_client_id = os.environ["AZURE_MAPS_CLIENT_ID"] 
+        self.azure_maps_base_url = os.environ["AZURE_MAPS_ENDPOINT"] 
+
+    @property
+    def _headers(self) -> Dict[str, str]:
+        return {
+            "x-ms-client-id": self.azure_maps_client_id,
+            "subscription-key": self.azure_maps_api_key
+        }
 
     async def runQuery(self):
         try:
@@ -130,18 +147,236 @@ class GenerateAnswer(NLWebHandler):
             tasks = []
             for url, json_str, name, site in top_embeddings:
                 tasks.append(asyncio.create_task(self.rankItem(url, json_str, name, site)))
-            
-            
+                        
             logger.debug(f"Running {len(tasks)} ranking tasks concurrently")
             await asyncio.gather(*tasks, return_exceptions=True)
-            
+
+            synthesizePrompt = self.SYNTHESIZE_PROMPT_NAME
+            allowEmptyAnswers = False
+
+            distanceRankingResponse = await PromptRunner(self).run_prompt(self.DISTANCE_RANKING_PROMPT_NAME) 
+
+            if (distanceRankingResponse):
+                
+                score = int(distanceRankingResponse.get("score", 0)) 
+                logger.debug(f"Distance ranking score: {score}")
+
+                if score >= self.DISTANCE_RANKING_THRESHOLD:
+
+                    location = distanceRankingResponse.get("location")      
+
+                    if not location:
+                        self.final_ranked_answers = []  # Clear ranked answers if we can't do distance ranking
+                        synthesizePrompt = self.SYNTHESIZE_PROMPT_NAME_NO_LOCATION                     
+                        allowEmptyAnswers = True  # Allow empty answers if we can't do distance ranking
+                        return
+                                                   
+                    countryRegion = distanceRankingResponse.get("countryRegion")
+    
+                    if location and countryRegion:
+                        await self.doDistanceRanking(location, countryRegion)
+
+                           
             # Synthesize the answer from ranked items
             logger.info("Ranking completed, synthesizing answer")
-            await self.synthesizeAnswer()
+            await self.synthesizeAnswer(allowEmptyAnswers, synthesizePrompt)
             
         except Exception as e:
             logger.exception(f"Error in get_ranked_answers: {e}")
             raise
+
+    async def get_ranked_answers(self):
+
+        logger.info("Starting retrieval and ranking process")
+
+        try:
+
+            # Wait for retrieval to be done if not already
+
+            logger.info("Retrieving items for query")
+
+            top_embeddings = await search(
+
+                self.decontextualized_query,
+
+                self.site,
+
+                query_params=self.query_params
+
+            )
+
+            self.items = top_embeddings  # Store all retrieved items
+
+            logger.debug(f"Retrieved {len(top_embeddings)} items from database")
+
+            # Rank each item
+
+            tasks = []
+
+            for url, json_str, name, site in top_embeddings:
+                tasks.append(asyncio.create_task(self.rankItem(url, json_str, name, site)))
+
+            logger.debug(f"Running {len(tasks)} ranking tasks concurrently")
+
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Once first-pass ranking is done, check if we should do distance-based ranking
+
+            allowEmptyAnswers = False
+            promptName = self.SYNTHESIZE_PROMPT_NAME
+            
+            distanceRankingResponse = await PromptRunner(self).run_prompt(self.DISTANCE_RANKING_PROMPT_NAME)
+ 
+            if (distanceRankingResponse):
+
+                score = int(distanceRankingResponse.get("score", 0))
+
+                logger.debug(f"Distance Ranking Prompt score: {score}")
+
+                if score >= self.DISTANCE_RANKING_THRESHOLD:
+
+                    location = distanceRankingResponse.get("location")
+
+                    if not location:
+                        self.final_ranked_answers = []  # Clear ranked answers if we can't do distance ranking    
+                        promptName = self.SYNTHESIZE_PROMPT_NAME_NO_LOCATION  # Use no-location prompt for synthesis
+                        allowEmptyAnswers = True  # Allow empty answers if we can't do distance ranking   
+                        
+                    else:                        
+                        countryRegion = distanceRankingResponse.get("countryRegion")
+
+                        if location and countryRegion:
+                            await self.do_distance_ranking(location, countryRegion)
+                        else:                        
+                            logger.error("Distance Ranking Prompt did not return valid location and/or countryRegion")
+
+            else:
+                logger.error("No Distance Ranking response received")
+
+
+            # Synthesize the answer from ranked items
+
+            logger.info("Ranking completed, synthesizing answer")            
+            await self.synthesizeAnswer(allowEmptyAnswers, promptName)  
+
+
+        except Exception as e:
+
+            logger.exception(f"Error in get_ranked_answers: {e}")
+            raise
+
+ 
+    async def do_distance_ranking(self, location: str, country_region: str):
+        """Main entry point to rank results by travel time."""
+        logger.debug(f"Starting distance ranking for: {location}, {country_region}")
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                # 1. Geocode the source
+                source_coords = await self._get_source_coordinates(session, location, country_region)
+                if not source_coords:
+                    return
+
+                # 2. Extract and validate destinations
+                destinations, valid_items = self._extract_destination_coordinates()
+                if not destinations:
+                    return
+
+                # 3. Get Matrix Data
+                matrix_results = await self._get_route_matrix(session, source_coords, destinations)
+                
+                # 4. Process and Sort
+                if matrix_results:
+                    self._rank_and_update_results(matrix_results, valid_items)
+
+        except Exception as e:
+            logger.exception(f"Critical error in do_distance_ranking: {e}")
+            raise
+
+    async def _get_source_coordinates(self, session: aiohttp.ClientSession, location: str, country_region: str) -> Optional[Tuple[float, float]]:
+        """Gets [longitude, latitude] for the given location."""
+        url = f"{self.azure_maps_base_url}/geocode?api-version=2025-01-01&locality={location}&countryRegion={country_region}"
+        
+        async with session.get(url, headers=self._headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+            if response.status != 200:
+                logger.error(f"Geocoding failed for {location}: Status {response.status}")
+                return None
+            
+            data = await response.json()
+            features = data.get("features", [])
+            if not features:
+                return None
+
+            # Logic to find a feature with a Bounding Box , which indicates a City/Town.
+            # If none of the features have a Bounding Box, take the first one but there is a danger that that the
+            # coordinates returned might not be near a road and therefore the Matrix API might not return results.
+            selected_feature = next((f for f in features if "bbox" in f), features[0])
+            coords = selected_feature["geometry"]["coordinates"]
+            return (coords[0], coords[1]) # [lon, lat]
+
+    def _extract_destination_coordinates(self) -> Tuple[List[List[float]], List[Dict]]:
+        """Parses self.final_ranked_answers for valid geo strings."""
+        dest_list = []
+        valid_items = []
+
+        for item in self.final_ranked_answers:
+            geo = item.get("schema_object", {}).get("geo", "")
+            if not geo or "," not in geo:
+                continue
+
+            try:
+                lat, lon = [float(val.strip()) for val in geo.split(",")]
+                # Azure Matrix API uses [longitude, latitude]
+                dest_list.append([lon, lat])
+                valid_items.append(item)
+            except (ValueError, AttributeError):
+                logger.warning(f"Malformed geo data for item: {item.get('name')}")
+                continue
+
+        return dest_list, valid_items
+
+    async def _get_route_matrix(self, session: aiohttp.ClientSession, origin: Tuple[float, float], destinations: List[List[float]]) -> Optional[List[Dict]]:
+        """Calls the Azure Maps Synchronous Route Matrix API."""
+        matrix_url = f"{self.azure_maps_base_url}/route/matrix/sync/json?api-version=1.0&routeType=shortest"
+        matrix_body = {
+            "origins": {"type": "MultiPoint", "coordinates": [origin]},
+            "destinations": {"type": "MultiPoint", "coordinates": destinations}
+        }
+
+        async with session.post(matrix_url, json=matrix_body, headers=self._headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+            if response.status == 200:
+                data = await response.json()
+                return data.get("matrix", [[]])[0] # Return the first origin row
+            
+            logger.error(f"Matrix API failed: Status {response.status}")
+            return None
+
+    def _rank_and_update_results(self, matrix_results: List[Dict], valid_items: List[Dict]):
+        """Combines matrix results with original data and sorts them."""
+        ranked_results = []
+
+        for i, route in enumerate(matrix_results):
+            if route.get("statusCode") == 200:
+                summary = route.get("response", {}).get("routeSummary", {})
+                travel_time = summary.get("travelTimeInSeconds", float('inf'))
+                ranked_results.append((valid_items[i], travel_time))
+
+        # Sort by travel time (ascending)
+        ranked_results.sort(key=lambda x: x[1])
+
+        if ranked_results:
+            self.final_ranked_answers = [
+                {
+                    "url": data["url"],
+                    "site": data["site"],
+                    "name": data["name"],
+                    "score": "100", # Maintaining original static score
+                    "description": f"Travel time in seconds: {time}",
+                    "schema_object": data["schema_object"]
+                }
+                for data, time in ranked_results
+            ]
+            logger.debug(f"Successfully ranked {len(self.final_ranked_answers)} items.")
 
     async def getDescription(self, url, json_str, query, answer, name, site):
         try:
@@ -153,8 +388,6 @@ class GenerateAnswer(NLWebHandler):
             logger.error(f"Error getting description for {name}: {str(e)}")
             logger.debug("Full error trace: ", exc_info=True)
             raise
-
-    async def synthesizeAnswer(self): 
         if not self.connection_alive_event.is_set():
             logger.warning("Connection lost, skipping answer synthesis")
             return
@@ -163,7 +396,6 @@ class GenerateAnswer(NLWebHandler):
             logger.info("Starting answer synthesis")
             
             # Check if we have any ranked answers to work with
-            if not self.final_ranked_answers:
                 logger.warning("No ranked answers found, sending empty response")
                 message = {
                     "message_type": "nlws",
@@ -174,7 +406,6 @@ class GenerateAnswer(NLWebHandler):
                 await self.send_message(message)
                 return
                 
-            response = await PromptRunner(self).run_prompt(self.SYNTHESIZE_PROMPT_NAME, timeout=100, verbose=True)
             logger.debug(f"Synthesis response received")
             
             json_results = []
@@ -209,7 +440,6 @@ class GenerateAnswer(NLWebHandler):
                         if isinstance(result, Exception):
                             logger.error(f"Error getting description: {result}")
                             continue
-                            
                         url, name, site, description, json_str = result
                         logger.debug(f"Adding result for {name} to final message")
                         json_results.append({
