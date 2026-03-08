@@ -202,6 +202,49 @@ TEMPLATES = [
         "assemble": {"type": "direct"}
     },
     {
+        "id": "deals_with_tickets",
+        "template": "Show top deals by revenue with support tickets",
+        "description": "List high-value deals with support tickets (using inner join - only deals WITH tickets)",
+        "extract": {},
+        "steps": [
+            {
+                "id": "results",
+                "query": {
+                    "primary_entity": "ent:SalesOpportunity",
+                    "select": [
+                        "ent:opportunityName", "ent:estimatedValue",
+                        "ent:customer.schema:name", "ent:pipelineStage"
+                    ],
+                    "filters": [
+                        {"property": "ent:opportunityStatus", "operator": "eq", "value": "Open"}
+                    ],
+                    "joins": [
+                        {
+                            "entity": "ent:SupportTicket",
+                            "on": {
+                                "left": "ent:SalesOpportunity.ent:customer",
+                                "right": "ent:SupportTicket.ent:affectedCustomer"
+                            },
+                            "type": "inner"
+                        }
+                    ],
+                    "aggregations": [
+                        {
+                            "function": "count",
+                            "entity": "ent:SupportTicket",
+                            "alias": "ticket_count",
+                            "filters": []
+                        }
+                    ],
+                    "order_by": [{"property": "ent:estimatedValue", "direction": "desc"}],
+                    "limit": 5
+                }
+            }
+        ],
+        "slot_to_step": {},
+        "assemble": {"type": "direct"}
+    },
+    {
         "id": "pipeline_by_dimension",
         "template": "What is the pipeline value by <dimension>",
         "description": "Pipeline value grouped by a dimension (stage, customer, industry)",
