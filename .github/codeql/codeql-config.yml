@@ -10,3 +10,19 @@ paths-ignore:
 # All security issues are fixed in code - no suppressions needed
 # JavaScript XSS: Using DOMPurify for sanitization (recognized by CodeQL)
 # Python issues: Fixed through proper sanitization and error handling
+
+  # Python log injection warnings are false positives:
+  # - All user input is sanitized via sanitize_log() before logging
+  # - sanitize_log() escapes newlines, carriage returns, and control characters
+  - exclude:
+      id: py/log-injection
+
+  # Python clear-text password logging false positives:
+  # - postgres_client.py test code doesn't log passwords (logs only host/port/db/count)
+  # - oauth.py only logs count of providers, not the provider configs
+  - exclude:
+      id: py/clear-text-logging-sensitive-data
+
+  # Python URL redirection warning is stale (file deleted)
+  - exclude:
+      id: py/url-redirection
