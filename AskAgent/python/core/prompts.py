@@ -305,7 +305,7 @@ class PromptRunner:
         
         # Hardcoded PrevQueryDecontextualizer prompt
         if prompt_name == 'PrevQueryDecontextualizer':
-            prompt_str = """The user is querying the site {request.site} which has {site.itemType}s.
+            prompt_str = """
         Rewrite the query, incorporating the context of the previous queries and answers.
         Keep the decontextualized query short and do not reference the site. 
 
