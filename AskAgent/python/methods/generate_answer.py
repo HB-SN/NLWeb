@@ -50,16 +50,25 @@ class GenerateAnswer(NLWebHandler):
         logger.info(f"GenerateAnswer initialized with query_params: {query_params}")
         log(f"GenerateAnswer query_params: {query_params}")
 
-        self.azure_maps_api_key = os.environ["AZURE_MAPS_API_KEY"] 
-        self.azure_maps_client_id = os.environ["AZURE_MAPS_CLIENT_ID"] 
-        self.azure_maps_base_url = os.environ["AZURE_MAPS_ENDPOINT"] 
+        self.azure_maps_client_id = os.environ["AZURE_MAPS_CLIENT_ID"]
+        self.azure_maps_base_url = os.environ["AZURE_MAPS_ENDPOINT"]
+        self.azure_maps_auth_method = os.environ.get("AZURE_MAPS_AUTH_METHOD", "api_key")
 
-    @property
-    def _headers(self) -> Dict[str, str]:
-        return {
-            "x-ms-client-id": self.azure_maps_client_id,
-            "subscription-key": self.azure_maps_api_key
-        }
+        if self.azure_maps_auth_method == "azure_ad":
+            from azure.identity.aio import DefaultAzureCredential
+            self._maps_credential = DefaultAzureCredential()
+        else:
+            self.azure_maps_api_key = os.environ["AZURE_MAPS_API_KEY"]
+            self._maps_credential = None
+
+    async def _get_maps_headers(self) -> Dict[str, str]:
+        headers: Dict[str, str] = {"x-ms-client-id": self.azure_maps_client_id}
+        if self._maps_credential is not None:
+            token = await self._maps_credential.get_token("https://atlas.microsoft.com/.default")
+            headers["Authorization"] = f"Bearer {token.token}"
+        else:
+            headers["subscription-key"] = self.azure_maps_api_key
+        return headers
 
     async def runQuery(self):
         try:
@@ -239,7 +248,7 @@ class GenerateAnswer(NLWebHandler):
         # 2. Added 'entityType=PopulatedPlace' to filter out irrelevant POIs
         url = f"{self.azure_maps_base_url}/geocode?api-version=2025-01-01&query={location}, {country_region}&entityType=PopulatedPlace"
                 
-        async with session.get(url, headers=self._headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+        async with session.get(url, headers=await self._get_maps_headers(), timeout=aiohttp.ClientTimeout(total=30)) as response:
             if response.status != 200:
                 logger.error(f"Geocoding failed for {location}: Status {response.status}")
                 return None
@@ -308,7 +317,7 @@ class GenerateAnswer(NLWebHandler):
         snap_url = f"{self.azure_maps_base_url}/search/address/reverse/json?api-version=1.0&query={query}"
         
         try:
-            async with session.get(snap_url, headers=self._headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+            async with session.get(snap_url, headers=await self._get_maps_headers(), timeout=aiohttp.ClientTimeout(total=30)) as response:
                 if response.status == 200:
                     data = await response.json()
                     addresses = data.get("addresses", [])
@@ -338,7 +347,7 @@ class GenerateAnswer(NLWebHandler):
             "destinations": {"type": "MultiPoint", "coordinates": list(snapped_destinations)}
         }
 
-        async with session.post(matrix_url, json=matrix_body, headers=self._headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+        async with session.post(matrix_url, json=matrix_body, headers=await self._get_maps_headers(), timeout=aiohttp.ClientTimeout(total=30)) as response:
             if response.status == 200:
                 data = await response.json()
                 # The response structure is matrix[origin_index][destination_index]
