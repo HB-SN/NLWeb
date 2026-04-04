@@ -316,7 +316,8 @@ class PromptRunner:
         context from the previous queries.
 
         The user's query is: {request.rawQuery}. 
-        Previous queries were: {request.previousQueries}."""
+        Previous queries were: {request.previousQueries}.
+        Previous answers were: {request.prevAnswers}."""
             
             ans_struc = {
                 "requires_decontextualization": "True or False",
