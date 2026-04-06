@@ -199,8 +199,10 @@ class GenerateAnswer(NLWebHandler):
                         # since we can't do distance ranking without it. 
                         countryRegion = os.environ["COUNTRY_REGION"]
 
+                        walkingMode = distanceRankingResponse.get("walking", False);
+                           
                         if location and countryRegion:
-                            await self.do_distance_ranking(location, countryRegion)
+                            await self.do_distance_ranking(location, countryRegion, walkingMode)
                         else:                        
                             logger.error("Distance Ranking Prompt did not return valid location and/or countryRegion")
 
@@ -216,7 +218,7 @@ class GenerateAnswer(NLWebHandler):
             raise
 
  
-    async def do_distance_ranking(self, location: str, country_region: str):
+    async def do_distance_ranking(self, location: str, country_region: str, walking_mode: bool):
         # Main entry point to rank results by travel time
         logger.debug(f"Starting distance ranking for: {location}, {country_region}")
 
@@ -233,7 +235,7 @@ class GenerateAnswer(NLWebHandler):
                     return
 
                 # 3. Get Matrix Data
-                matrix_results = await self._get_route_matrix(session, source_coords, destinations)
+                matrix_results = await self._get_route_matrix(session, source_coords, destinations, walking_mode)
                 
                 # 4. Process and Sort
                 if matrix_results:
@@ -330,7 +332,7 @@ class GenerateAnswer(NLWebHandler):
         
         return lon_lat # Fallback to original if snapping fails
 
-    async def _get_route_matrix(self, session: aiohttp.ClientSession, origin: Tuple[float, float], destinations: List[List[float]]) -> Optional[List[Dict]]:
+    async def _get_route_matrix(self, session: aiohttp.ClientSession, origin: Tuple[float, float], destinations: List[List[float]], walking_mode: bool) -> Optional[List[Dict]]:
         # Calls the Azure Maps Synchronous Route Matrix API with snapped coordinates.
         
         # 1. Snap destinations to the nearest road
@@ -341,7 +343,13 @@ class GenerateAnswer(NLWebHandler):
         )
 
         # 2. Proceed with the Matrix API call using snapped points
-        matrix_url = f"{self.azure_maps_base_url}/route/matrix/sync/json?api-version=1.0&routeType=shortest"
+
+        if walking_mode:
+            travelMode = "pedestrian"
+        else:          
+            travelMode = "car"
+
+        matrix_url = f"{self.azure_maps_base_url}/route/matrix/sync/json?api-version=1.0&routeType=shortest&travelMode={travelMode}"
         matrix_body = {
             "origins": {"type": "MultiPoint", "coordinates": [origin]},
             "destinations": {"type": "MultiPoint", "coordinates": list(snapped_destinations)}

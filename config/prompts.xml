@@ -223,11 +223,17 @@
   
   If the score is 100 and the query specifies a town, city, or region, extract it into the 'location' field.
   Otherwise, 'location' should be null.
+
+  If the user is asking how to get from A to Be, you the A for the 'location' field.
+
+  If the user states they are walkiking set the 'walking' field to true, otherwise set it to false.
+
 </promptString>
 				<returnStruc>
         {
           "score" : "integer between 0 and 100",
-          "location": "the extracted location from the user's query, if present"          
+          "location": "the extracted location from the user's query, if present"  
+          "walking": "true if the query specifies walking distance, false otherwise",        
         }
       </returnStruc>
 			</Prompt>		
