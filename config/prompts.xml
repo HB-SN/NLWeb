@@ -36,11 +36,7 @@
     - History: [Q: 'Where can I get food?' | A: 'Where are you now?']
     - Current: 'Moro'
     - Result: 'Where can I get food in Moro?'
-
-    - History: [Q: 'Find hotels.' | A: 'What is your budget?']
-    - Current: 'Under $200'
-    - Result: 'Find hotels under $200'
-
+    
     DATA:
     Current User Query: {request.rawQuery}
     Previous Queries: {request.previousQueries}
