@@ -232,8 +232,8 @@
 				<returnStruc>
         {
           "score" : "integer between 0 and 100",
-          "location": "the extracted location from the user's query, if present"  
-          "walking": "true if the query specifies walking distance, false otherwise",        
+          "location": "the extracted location from the user's query, if present",  
+          "walking": "true if the query specifies walking distance, false otherwise"        
         }
       </returnStruc>
 			</Prompt>		
