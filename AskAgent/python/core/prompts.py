@@ -306,14 +306,20 @@ class PromptRunner:
         # Hardcoded PrevQueryDecontextualizer prompt
         if prompt_name == 'PrevQueryDecontextualizer':
             prompt_str = """
-        Rewrite the query, incorporating the context of the previous queries and answers.
-        Keep the decontextualized query short and do not reference the site. 
+        Identify the user's intent by merging their current query with the history. 
+    
+    CRITICAL RULES:
+    1. SLOT FILLING: If the previous answer asked a question (e.g., 'Where are you?'), treat the current query as the specific value for that slot. Ensure the location or entity is included in the final query.
+    2. STANDALONE QUERY: The result must be a concise, searchable question. Do NOT include conversational greetings (e.g., 'Hello,' 'Hi'), introductory phrases ('The user is looking for'), or site references.
+    3. ENTITY PERSISTENCE: Never drop specific names, locations, or dates provided in the current query.
+    4. NO CHANGE: If the current query is a completely new topic, return it as-is.
 
-        If the query very clearly does not reference earlier queries, 
-        don't change the query. Err on the side of incorporating the context of the 
-        previous queries. If you are not sure whether this is a brand new query, 
-        or follow up, it is likely a follow up. Try your best to incorporate the 
-        context from the previous queries.
+    EXAMPLE:
+    - History: [Q: 'Where can I get food?' | A: 'Where are you now?']
+    - Current: 'Moro'
+    - Result: 'Where can I get food in Moro?'
+    
+    DATA:
 
         The user's query is: {request.rawQuery}. 
         Previous queries were: {request.previousQueries}.
