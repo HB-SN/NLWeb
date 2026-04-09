@@ -50,6 +50,15 @@ class GenerateAnswer(NLWebHandler):
         logger.info(f"GenerateAnswer initialized with query_params: {query_params}")
         log(f"GenerateAnswer query_params: {query_params}")
 
+        # Set the threshold for gathering items, defaulting to 40 if not set or invalid
+        gatherItemsThresholdDefault = 40
+        gatherItemsThresholdValue = os.environ.get("GATHER_ITEMS_THRESHOLD")
+
+        try:
+            GATHER_ITEMS_THRESHOLD = int(gatherItemsThresholdValue) if gatherItemsThresholdValue is not None else gatherItemsThresholdDefault
+        except ValueError:
+            value = gatherItemsThresholdDefault
+
         self.azure_maps_client_id = os.environ["AZURE_MAPS_CLIENT_ID"]
         self.azure_maps_base_url = os.environ["AZURE_MAPS_ENDPOINT"]
         self.azure_maps_auth_method = os.environ.get("AZURE_MAPS_AUTH_METHOD", "api_key")
