@@ -220,7 +220,7 @@ class GenerateAnswer(NLWebHandler):
  
     async def do_distance_ranking(self, location: str, country_region: str, walking_mode: bool):
         # Main entry point to rank results by travel time
-        logger.debug(f"Starting distance ranking for: {location}, {country_region}")
+        logger.debug(f"Starting distance ranking for: {location}, {country_region}, {walking_mode}")
 
         try:
             async with aiohttp.ClientSession() as session:

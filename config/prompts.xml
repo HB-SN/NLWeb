@@ -221,7 +221,33 @@
         }
       </returnStruc>
 			</Prompt>		
-			<Prompt ref="DistanceRankingPromptForGenerate">
+
+      
+      			<Prompt ref="DistanceRankingPromptForGenerate">
+	<promptString>        
+  The user's question is: "{request.query}".        
+
+  1. TASK: Determine if the query is seeking a physical object, facility, or service. If yes, score = 100.
+  
+  2. LOCATION EXTRACTION (CRITICAL):
+     - If the user is asking for directions or travel time FROM "Point A" TO "Point B": 
+       You MUST extract the origin (Point A) as the 'location'. Ignore any cities mentioned in the destination.
+     - Otherwise, if a town, city, or region is specified as the search area, extract it into 'location'.
+     - If neither applies, 'location' must be null.
+
+  3. TRANSPORTATION:
+     - Set 'walking' to true ONLY if the query explicitly mentions "walk", "walking", or "on foot". Otherwise, false.
+</promptString>
+				<returnStruc>
+        {
+          "score" : "integer between 0 and 100",
+          "location": "the extracted location from the query, if present",  
+          "walking": "true if the query specifies walking distance, false otherwise"        
+        }
+      </returnStruc>
+			</Prompt>		 
+
+			<!-- <Prompt ref="DistanceRankingPromptForGenerate">
 		<promptString>        
   The user's question is: "{request.query}".        
   If the query is related to finding a physical object, a facility (e.g., shelter, hotel), or a specific service, the score must be 100.
@@ -229,9 +255,9 @@
   If the score is 100 and the query specifies a town, city, or region, extract it into the 'location' field.
   Otherwise, 'location' should be null.
 
-  If the user is asking how to get from A to Be, you the A for the 'location' field.
+  If the user is asking how to get from A to B, you MUST use A for the 'location' field.
 
-  If the user states they are walkiking set the 'walking' field to true, otherwise set it to false.
+  If the user states they are walking set the 'walking' field to true, otherwise set it to false.
 
 </promptString>
 				<returnStruc>
@@ -241,7 +267,7 @@
           "walking": "true if the query specifies walking distance, false otherwise"        
         }
       </returnStruc>
-			</Prompt>		
+			</Prompt>		 -->
 
     <Prompt ref="SynthesizePromptForGenerate">
       <promptString>
