@@ -67,7 +67,18 @@ class PrevQueryDecontextualizer(NoOpDecontextualizer):
             self.handler.decontextualized_query = self.handler.query
             await self.handler.state.precheck_step_done(self.STEP_NAME)
             return
-        elif "requires_decontextualization" not in response:
+
+        if "new_topic" in response:
+            if response["new_topic"] == "true":
+                logger.info("New topic detected, skipping decontextualization")
+                self.handler.requires_decontextualization = False
+                self.handler.decontextualized_query = self.handler.query
+                self.handler.last_answers = []  # Clear last answers to prevent irrelevant context in future queries    
+                self.handler.prev_queries = []   # Clear last queries as well
+                await self.handler.state.precheck_step_done(self.STEP_NAME)
+                return
+
+        if "requires_decontextualization" not in response:
             error_msg = f"Missing 'requires_decontextualization' key in response: {response}"
             logger.error(error_msg)
             if CONFIG.should_raise_exceptions():

@@ -33,7 +33,7 @@ logger = get_configured_logger("generate_answer")
 
 class GenerateAnswer(NLWebHandler):
 
-    GATHER_ITEMS_THRESHOLD = 55
+    GATHER_ITEMS_THRESHOLD = 40
     DISTANCE_RANKING_THRESHOLD = 100
      
     RANKING_PROMPT_NAME = "RankingPromptForGenerate"
@@ -49,6 +49,15 @@ class GenerateAnswer(NLWebHandler):
         self._results_lock = asyncio.Lock()  # Add lock for thread-safe operations
         logger.info(f"GenerateAnswer initialized with query_params: {query_params}")
         log(f"GenerateAnswer query_params: {query_params}")
+
+        # Set the threshold for gathering items, defaulting to 40 if not set or invalid
+        gatherItemsThresholdDefault = 40
+        gatherItemsThresholdValue = os.environ.get("GATHER_ITEMS_THRESHOLD")
+
+        try:
+            GATHER_ITEMS_THRESHOLD = int(gatherItemsThresholdValue) if gatherItemsThresholdValue is not None else gatherItemsThresholdDefault
+        except ValueError:
+            value = gatherItemsThresholdDefault
 
         self.azure_maps_client_id = os.environ["AZURE_MAPS_CLIENT_ID"]
         self.azure_maps_base_url = os.environ["AZURE_MAPS_ENDPOINT"]
@@ -130,7 +139,7 @@ class GenerateAnswer(NLWebHandler):
                 'sent': False,
             }
 
-            if ranking.get("score", 0) > self.GATHER_ITEMS_THRESHOLD:
+            if ranking.get("score", 0) >= self.GATHER_ITEMS_THRESHOLD:
                 logger.info(f"High score item: {name} (score: {ranking['score']})")
                 async with self._results_lock:  # Thread-safe append
                     self.final_ranked_answers.append(ansr)
