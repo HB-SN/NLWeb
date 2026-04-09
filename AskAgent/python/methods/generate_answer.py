@@ -33,7 +33,7 @@ logger = get_configured_logger("generate_answer")
 
 class GenerateAnswer(NLWebHandler):
 
-    GATHER_ITEMS_THRESHOLD = 55
+    GATHER_ITEMS_THRESHOLD = 40
     DISTANCE_RANKING_THRESHOLD = 100
      
     RANKING_PROMPT_NAME = "RankingPromptForGenerate"
@@ -130,7 +130,7 @@ class GenerateAnswer(NLWebHandler):
                 'sent': False,
             }
 
-            if ranking.get("score", 0) > self.GATHER_ITEMS_THRESHOLD:
+            if ranking.get("score", 0) >= self.GATHER_ITEMS_THRESHOLD:
                 logger.info(f"High score item: {name} (score: {ranking['score']})")
                 async with self._results_lock:  # Thread-safe append
                     self.final_ranked_answers.append(ansr)

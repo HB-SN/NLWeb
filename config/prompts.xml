@@ -22,8 +22,8 @@
         }
       </returnStruc>
 			</Prompt>
-		<Prompt ref="PrevQueryDecontextualizer">
-    <promptString>        
+			<Prompt ref="PrevQueryDecontextualizer">
+				<promptString>        
     Identify the user's intent by merging their current query with the history. 
     
     CRITICAL RULES:
@@ -42,13 +42,13 @@
     Previous Queries: {request.previousQueries}
     Previous Answers: {request.prevAnswers}
     </promptString>
-    <returnStruc>
+				<returnStruc>
     {
       "requires_decontextualization": "True or False",
       "decontextualized_query": "The rewritten search query"
     }
     </returnStruc>
-</Prompt>
+			</Prompt>
 			<Prompt ref="DecontextualizeContextPrompt">
 				<promptString>
         The user is asking the following question: '{request.rawQuery}' in the context of 
@@ -220,14 +220,27 @@
           "description" : "objective summary of the object"
         }
       </returnStruc>
-			</Prompt>		
+			</Prompt>
+			<Prompt ref="DistanceRankingPromptForGenerate">
+				<promptString>        
+  The user's question is: "{request.query}".     
+  The user's previous questions: {request.previousQueries}   
 
-      
-      			<Prompt ref="DistanceRankingPromptForGenerate">
-	<promptString>        
-  The user's question is: "{request.query}".        
+  1. TASK: Determine if the user is actively trying to FIND, BUY, ACCESS, VISIT, or USE 
+a physical object, facility, or service.
 
-  1. TASK: Determine if the query is seeking a physical object, facility, or service. If yes, score = 100.
+- Examples that SHOULD score 100:
+  - "Where can I buy a lemon?"
+  - "Where is the nearest hospital?"
+  - "How do I get from Shikapur to Moro?"
+
+- Examples that should NOT score 100:
+  - "Can I eat a lemon?"
+  - "What is a hospital?"
+  - "Is coffee good for you?"
+
+Only return score = 100 if the user intent clearly involves acquiring, locating, or accessing something in the real world.
+Otherwise, score = 0.
   
   2. LOCATION EXTRACTION (CRITICAL):
      - If the user is asking for directions or travel time FROM "Point A" TO "Point B": 
@@ -245,32 +258,9 @@
           "walking": "true if the query specifies walking distance, false otherwise"        
         }
       </returnStruc>
-			</Prompt>		 
-
-			<!-- <Prompt ref="DistanceRankingPromptForGenerate">
-		<promptString>        
-  The user's question is: "{request.query}".        
-  If the query is related to finding a physical object, a facility (e.g., shelter, hotel), or a specific service, the score must be 100.
-  
-  If the score is 100 and the query specifies a town, city, or region, extract it into the 'location' field.
-  Otherwise, 'location' should be null.
-
-  If the user is asking how to get from A to B, you MUST use A for the 'location' field.
-
-  If the user states they are walking set the 'walking' field to true, otherwise set it to false.
-
-</promptString>
-				<returnStruc>
-        {
-          "score" : "integer between 0 and 100",
-          "location": "the extracted location from the query, if present",  
-          "walking": "true if the query specifies walking distance, false otherwise"        
-        }
-      </returnStruc>
-			</Prompt>		 -->
-
-    <Prompt ref="SynthesizePromptForGenerate">
-      <promptString>
+			</Prompt>
+			<Prompt ref="SynthesizePromptForGenerate">
+				<promptString>
         Synthesize a factual, service-oriented answer for: '{request.query}' using only the provided items: {request.answers}.
         If relevant, you may also reference previously provided answers: {request.prevAnswers}.
         MANDATORY REQUIREMENTS:
@@ -286,14 +276,13 @@
         9. Never attempt to synthesize information that is not present in the data.
         10.Never attempt medical diagnosis.
       </promptString>
-       <returnStruc>
+				<returnStruc>
         {
           "answer" : "string",
           "urls" : "urls of the items included in the answer"               
         }
       </returnStruc>
-    </Prompt>    
-
+			</Prompt>
 			<Prompt ref="SynthesizePromptForGenerateNoLocation">
 				<promptString>
         Synthesize an answer for this query: '{request.query}'
