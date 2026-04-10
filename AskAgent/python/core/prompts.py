@@ -312,7 +312,7 @@ class PromptRunner:
     1. SLOT FILLING: If the previous answer asked a question (e.g., 'Where are you?'), treat the current query as the specific value for that slot. Ensure the location or entity is included in the final query.
     2. STANDALONE QUERY: The result must be a concise, searchable question. Do NOT include conversational greetings (e.g., 'Hello,' 'Hi'), introductory phrases ('The user is looking for'), or site references.
     3. ENTITY PERSISTENCE: Never drop specific names, locations, or dates provided in the current query.
-    4. NO CHANGE: If the current query is a completely new topic, return it as-is and set "new_topic" to true.
+    4. NO CHANGE: ONLY set "new_topic" to true if the current query shares no entities (locations, people, dates) and no logical progression with the history.
 
     EXAMPLE:
     - History: [Q: 'Where can I get food?' | A: 'Where are you now?']

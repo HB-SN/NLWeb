@@ -182,7 +182,7 @@ class GenerateAnswer(NLWebHandler):
             allowEmptyAnswers = False
             promptName = self.SYNTHESIZE_PROMPT_NAME
             
-            distanceRankingResponse = await PromptRunner(self).run_prompt(self.DISTANCE_RANKING_PROMPT_NAME)
+            distanceRankingResponse = await PromptRunner(self).run_prompt(self.DISTANCE_RANKING_PROMPT_NAME, timeout=30, verbose=True, level="high")
  
             if (distanceRankingResponse):
 
