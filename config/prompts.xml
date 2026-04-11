@@ -226,61 +226,75 @@
           }
         </returnStruc>
       </Prompt>
-      	<Prompt ref="RankingPromptForGenerate">
-				<promptString>
-        Assign a score between 0 and 100 to the following item
-        based on useful it might be to answering the user's question. 
-        The user's question is: \"{request.query}\".
-        The item in schema.org format is: \"{item.description}\". Include a 
-        short description of the item in the description field.
-      </promptString>
-				<returnStruc>
-        {
+      <Prompt ref="RankingPromptForGenerate">
+        <promptString>
+          Assign a score between 0 and 100 to the following item
+          based on useful it might be to answering the user's question.
+          The user's question is: \"{request.query}\".
+          The item in schema.org format is: \"{item.description}\". Include a
+          short description of the item in the description field.
+        </promptString>
+        <returnStruc>
+          {
           "score" : "integer between 0 and 100",
           "description" : "objective summary of the object"
-        }
-      </returnStruc>
-			</Prompt>
+          }
+        </returnStruc>
+      </Prompt>
       <Prompt ref="DistanceRankingPromptForGenerate">
         <promptString>
-          The user's question is: "{request.query}".
-          The user's previous questions: {request.previousQueries}
+          1. TASK: Intent Classification
+          Analyze if the user’s primary goal is to physically locate or navigate to a resource,
+          facility, or service in the real world.
 
-          1. TASK: Determine if the user has an active, actionable intent to find          
-          a physical object, facility, service, or safety/survival resource.
+          Score = 100 (Spatial/Navigational Intent): The user is trying to find "where" something
+          is, how to "get" there, or is reporting a crisis that requires an immediate physical
+          destination (e.g., "I have no shelter").
 
-          If the user indicates a crisis, loss of property, or displacement
-          (e.g., "my home is gone", "we lost everything"), ALWAYS assume the intent is an active
-          request to locate or access help/services. These queries are NOT existential; they are
-          requests for survival resources.
+          Score = 0 (Informational/Logistical Intent): The user is asking about the "when," "who,"
+          "how much," or "what" of a service (e.g., opening hours, eligibility, prices, or
+          definitions), even if that service is a survival resource.
 
-          - Examples that SHOULD score 100:
-          - "Where can I buy a lemon?"
-          - "My home Shikarpur is gone. Where will we live?"
-          - "Where is the nearest hospital?"
-          - "How do I get from Shikapur to Moro?"
-          - "We have no clean water left."
+          CRITICAL LOGIC:
 
-          - Examples that should NOT score 100:
-          - "Can I eat a lemon?"
-          - "What is a hospital?"
-          - "Is coffee good for you?"
-          - "Why do floods happen?"
+          Displacement/Crisis: If the user indicates they are displaced or in immediate danger
+          (e.g., "My home is gone"), treat this as an active request to locate help. Score = 100.
+          Logistics Check: If the query is strictly about timing (e.g., "What time?", "Is it open
+          today?"), Score = 0.
 
-          Only return score = 100 if the user intent involves acquiring, locating, or accessing
-          resources/services in the real world.
-          Otherwise, score = 0.
+          Examples for Score 100:
+
+          "Where is the nearest clean water?"
+
+          "How do I get to the hospital in Moro?"
+
+          "We are stranded and need shelter."
+
+          "Directions to the Bhandi distribution site."
+
+          Examples for Score 0:
+
+          "What are the opening hours for the Bhandi event?"
+
+          "How much does animal fodder cost?"
+
+          "Who is eligible for the water program?"
+
+          "Is coffee healthy?"
 
           2. LOCATION EXTRACTION
-          - If the user is asking for directions or travel time FROM "Point A" TO "Point B":
-          You MUST extract the origin (Point A) as the 'location'. Ignore any cities mentioned in
-          the destination.
-          - Otherwise, if a town, city, or region is specified as the search area, extract it into
-          'location'.
-          - If neither applies, 'location' must be null.
 
-          3. TRANSPORTATION:
-          - Set 'walking' to true ONLY if the query explicitly mentions "walk", "walking", or "on
+          Routes: If the user asks for directions FROM "Point A" TO "Point B," extract the origin
+          (Point A) into 'location'.
+
+          Search Area: If a specific town, city, or landmark is mentioned as the target area,
+          extract it into 'location'.
+
+          Null Case: If no geographic origin or search area is mentioned, 'location' must be null.
+
+          3. TRANSPORTATION
+
+          Set 'walking' to true ONLY if the query explicitly mentions "walk", "walking", or "on
           foot". Otherwise, false.
 </promptString>
         <returnStruc>
