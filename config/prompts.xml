@@ -246,11 +246,10 @@
           The user's question is: "{request.query}".
           The user's previous questions: {request.previousQueries}
 
-          1. TASK: Determine if the user has an active, actionable intent to FIND, BUY, ACCESS,
-          VISIT, USE, or SECURE
+          1. TASK: Determine if the user has an active, actionable intent to find          
           a physical object, facility, service, or safety/survival resource.
 
-          - CRITICAL INSTRUCTION: If the user indicates a crisis, loss of property, or displacement
+          If the user indicates a crisis, loss of property, or displacement
           (e.g., "my home is gone", "we lost everything"), ALWAYS assume the intent is an active
           request to locate or access help/services. These queries are NOT existential; they are
           requests for survival resources.
@@ -272,7 +271,7 @@
           resources/services in the real world.
           Otherwise, score = 0.
 
-          2. LOCATION EXTRACTION (CRITICAL):
+          2. LOCATION EXTRACTION
           - If the user is asking for directions or travel time FROM "Point A" TO "Point B":
           You MUST extract the origin (Point A) as the 'location'. Ignore any cities mentioned in
           the destination.
