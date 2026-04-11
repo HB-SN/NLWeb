@@ -243,6 +243,10 @@
       </Prompt>
       <Prompt ref="DistanceRankingPromptForGenerate">
         <promptString>
+
+          The user's question is: "{request.query}".
+          The user's previous questions: {request.previousQueries}
+
           1. TASK: Intent Classification
           Analyze if the user is attempting to find, reach, or acquire a physical resource or
           service.
