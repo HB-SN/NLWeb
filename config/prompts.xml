@@ -244,23 +244,26 @@
       <Prompt ref="DistanceRankingPromptForGenerate">
         <promptString>
           1. TASK: Intent Classification
-          Analyze if the user’s primary goal is to physically locate or navigate to a resource,
-          facility, or service in the real world.
+          Analyze if the user is attempting to find, reach, or acquire a physical resource or
+          service.
 
-          Score = 100 (Spatial/Navigational Intent): The user is trying to find "where" something
-          is, how to "get" there, or is reporting a crisis that requires an immediate physical
-          destination (e.g., "I have no shelter").
+          Score = 100 (Actionable Intent):
+          - The user asks "where" to find something or "how" to get there.
+          - The user is looking for survival resources (food, water, shelter, medicine).
+          - The user reports a crisis (e.g., "we lost everything").
+          - NOTE: A query like "Where can I get food?" is Score 100 because it implies a need for a
+          physical location, even if no city is named yet.
 
-          Score = 0 (Informational/Logistical Intent): The user is asking about the "when," "who,"
-          "how much," or "what" of a service (e.g., opening hours, eligibility, prices, or
-          definitions), even if that service is a survival resource.
+          Score = 0 (Informational/Logistical Intent):
+          - The user asks about timing (opening hours), "who" is in charge, "how much" it costs, or
+          general definitions.
+          - The query is a general knowledge question (e.g., "What is a protein?").
 
           CRITICAL LOGIC:
-
-          Displacement/Crisis: If the user indicates they are displaced or in immediate danger
-          (e.g., "My home is gone"), treat this as an active request to locate help. Score = 100.
-          Logistics Check: If the query is strictly about timing (e.g., "What time?", "Is it open
-          today?"), Score = 0.
+          - Resource Priority: If the query is about survival essentials, assume the intent is to
+          physically access them.
+          - Logistics Check: Only score 0 if the query is strictly limited to non-spatial details
+          like "When" or "How much."
 
           Examples for Score 100:
 
