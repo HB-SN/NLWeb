@@ -328,7 +328,7 @@ class PromptRunner:
             ans_struc = {
                 "requires_decontextualization": "True or False",
                 "decontextualized_query": "The rewritten query, if decontextualization is required",
-                "new_topic": "true or false - whether the current query is a new topic compared to previous queries"
+                "new_topic": "true or false - whether the current query is a new topic compared to previous queries",
                 "decontextualized_query": "The rewritten query, if decontextualization is required",
                 "new_topic": "true or false - whether the current query is a new topic compared to previous queries"
             }
