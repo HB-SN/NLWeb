@@ -226,6 +226,21 @@
           }
         </returnStruc>
       </Prompt>
+      	<Prompt ref="RankingPromptForGenerate">
+				<promptString>
+        Assign a score between 0 and 100 to the following item
+        based on useful it might be to answering the user's question. 
+        The user's question is: \"{request.query}\".
+        The item in schema.org format is: \"{item.description}\". Include a 
+        short description of the item in the description field.
+      </promptString>
+				<returnStruc>
+        {
+          "score" : "integer between 0 and 100",
+          "description" : "objective summary of the object"
+        }
+      </returnStruc>
+			</Prompt>
       <Prompt ref="DistanceRankingPromptForGenerate">
         <promptString>
           The user's question is: "{request.query}".
@@ -245,7 +260,7 @@
           - "My home Shikarpur is gone. Where will we live?"
           - "Where is the nearest hospital?"
           - "How do I get from Shikapur to Moro?"
-          - "We have no clean water left." (Actionable intent: Finding water source)
+          - "We have no clean water left."
 
           - Examples that should NOT score 100:
           - "Can I eat a lemon?"
