@@ -332,6 +332,7 @@
           8. DO NOT include pleasantries.
           9. Never attempt to synthesize information that is not present in the data.
           10.Never attempt medical diagnosis.
+          11. For items have a very similar score, and were both items have a travel time, prioritze the item with the shorter travel time, even if the score is slightly lower, as long as the score is above 75.
         </promptString>
         <returnStruc>
           {
