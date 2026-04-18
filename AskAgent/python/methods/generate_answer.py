@@ -265,37 +265,40 @@ class GenerateAnswer(NLWebHandler):
             raise
 
     async def _get_source_coordinates(self, session: aiohttp.ClientSession, location: str, country_region: str) -> Optional[Tuple[float, float]]:
-        # 1. Use 'query' instead of 'locality' to find both Cities and Districts
-        # 2. Added 'entityType=PopulatedPlace' to filter out irrelevant POIs
         url = f"{self.azure_maps_base_url}/geocode?api-version=2025-01-01&query={location}, {country_region}&entityType=PopulatedPlace"
-                
+            
         async with session.get(url, headers=await self._get_maps_headers(), timeout=aiohttp.ClientTimeout(total=30)) as response:
             if response.status != 200:
                 logger.error(f"Geocoding failed for {location}: Status {response.status}")
                 return None
                             
             data = await response.json()
-            features = data.get("features", [])
+            all_features = data.get("features", [])
+            
+            # Filter for high-confidence 'PopulatedPlace' features only
+            features = [
+                f for f in all_features 
+                if f.get("properties", {}).get("type") == "PopulatedPlace" 
+                and f.get("properties", {}).get("confidence") == "High"
+            ]
+
             if not features:
+                logger.warning(f"No High-confidence PopulatedPlace features found for {location}")
                 return None
 
-            # Helper to calculate the area of the bounding box
             def get_bbox_area(feature):
                 bbox = feature.get("bbox")
                 if not bbox or len(bbox) < 4:
-                    return float('inf')  # Treat features without bbox as least specific
+                    return float('inf')
                 # bbox is [minLon, minLat, maxLon, maxLat]
-                width = bbox[2] - bbox[0]
-                height = bbox[3] - bbox[1]
+                width = abs(bbox[2] - bbox[0])
+                height = abs(bbox[3] - bbox[1])
                 return width * height
 
-            # Find the feature with the SMALLEST bounding box.
-            # This identifies the specific town/city rather than the broad administrative district.
+            # Select the most specific match from the high-confidence set
             selected_feature = min(features, key=get_bbox_area)
             
             coords = selected_feature["geometry"]["coordinates"]
-            # Azure Maps returns [longitude, latitude]
-
             return (coords[0], coords[1])
 
     def _extract_destination_coordinates(self) -> Tuple[List[List[float]], List[Dict]]:
