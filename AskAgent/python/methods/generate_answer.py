@@ -238,16 +238,26 @@ class GenerateAnswer(NLWebHandler):
                 if not source_coords:
                     return
 
+                logger.debug(f"Geocoding result for {location}: {source_coords}")                    
+
                 # 2. Extract and validate destinations
                 destinations, valid_items = self._extract_destination_coordinates()
                 if not destinations:
+                    logger.debug(f"Destinations result for {location} is null or empty")                    
                     return
 
                 # 3. Get Matrix Data
                 matrix_results = await self._get_route_matrix(session, source_coords, destinations, walking_mode)
+
+                if not matrix_results:
+                    logger.debug(f"Matrix result for {location} is null or empty")                    
+                    return
                 
                 # 4. Process and Sort
                 if matrix_results:
+
+                    logger.debug(f"Matrix result for {location} has {len(matrix_results)} entry/entries")                        
+
                     self._rank_and_update_results(matrix_results, valid_items)
 
         except Exception as e:
@@ -263,7 +273,7 @@ class GenerateAnswer(NLWebHandler):
             if response.status != 200:
                 logger.error(f"Geocoding failed for {location}: Status {response.status}")
                 return None
-            
+                            
             data = await response.json()
             features = data.get("features", [])
             if not features:
@@ -285,6 +295,7 @@ class GenerateAnswer(NLWebHandler):
             
             coords = selected_feature["geometry"]["coordinates"]
             # Azure Maps returns [longitude, latitude]
+
             return (coords[0], coords[1])
 
     def _extract_destination_coordinates(self) -> Tuple[List[List[float]], List[Dict]]:
@@ -376,7 +387,7 @@ class GenerateAnswer(NLWebHandler):
     def _rank_and_update_results(self, matrix_results: List[Dict], valid_items: List[Dict]):
         # Combines matrix results with original data and sorts them.
         ranked_results = []
-
+        
         for i, route in enumerate(matrix_results):
             if route.get("statusCode") == 200:
                 summary = route.get("response", {}).get("routeSummary", {})
