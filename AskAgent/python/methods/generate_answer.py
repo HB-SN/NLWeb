@@ -393,10 +393,13 @@ class GenerateAnswer(NLWebHandler):
                 summary = route.get("response", {}).get("routeSummary", {})
                 travel_time = summary.get("travelTimeInSeconds", float('inf'))
                 ranked_results.append((valid_items[i], travel_time))
+            else:
+                logger.warning(f"Route calculation failed for item: {valid_items[i].get('name')}, statusCode: {route.get('statusCode')}")
+                ranked_results.append((valid_items[i], float('inf')))  # Treat failed routes as infinitely far
 
         # Sort by travel time (ascending)
         ranked_results.sort(key=lambda x: x[1])
-
+                
         if ranked_results:
             self.final_ranked_answers = [
                 {
@@ -410,6 +413,8 @@ class GenerateAnswer(NLWebHandler):
                 for data, time in ranked_results
             ]
             logger.debug(f"Successfully ranked {len(self.final_ranked_answers)} items.")
+        else:
+            logger.debug("No valid routes found to rank.")
 
     async def getDescription(self, url, json_str, query, answer, name, site):
         try:
