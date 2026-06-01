@@ -230,8 +230,11 @@
         Separate what the user needs from where they are:
         1. relevance_query: restate ONLY the kind of place, service, or resource
            the user needs, with every town, city, and region name removed. Do not
-           mention any location. This is used to judge how relevant an item is,
-           independent of distance.
+           mention any location. Also drop any detail the user is asking ABOUT
+           that resource (such as its opening hours, opening date, phone number,
+           price, or capacity) - keep only the kind of place or service. This is
+           used to judge how relevant an item is, independent of distance and of
+           which detail was asked for.
         2. location: the town, city, or region the user is currently in or asking
            about, taken from the request. If none is mentioned, leave it empty.
         3. is_place_query: True if the user is seeking a physical place, service,
@@ -246,6 +249,9 @@
 
         Request: "Are there female-only accommodations available in Moro for a lone female traveler?"
         relevance_query is "female-only accommodation for a lone female", location is "Moro", is_place_query is True.
+
+        Request: "When does the female-only accommodation in Moro open?"
+        relevance_query is "female-only accommodation", location is "Moro", is_place_query is True.
 
         Request: "What are the symptoms of cholera?"
         relevance_query is "symptoms of cholera", location is "", is_place_query is False.
