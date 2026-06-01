@@ -34,10 +34,9 @@ logger = get_configured_logger("generate_answer")
 class GenerateAnswer(NLWebHandler):
 
     GATHER_ITEMS_THRESHOLD = 55
-    DISTANCE_RANKING_THRESHOLD = 50
 
     RANKING_PROMPT_NAME = "RankingPromptForGenerate"
-    DISTANCE_RANKING_PROMPT_NAME = "DistanceRankingPromptForGenerate"
+    RELEVANCE_QUERY_PROMPT_NAME = "RelevanceQueryPromptForGenerate"
 
     SYNTHESIZE_PROMPT_NAME_NO_LOCATION = "SynthesizePromptForGenerateNoLocation"
     SYNTHESIZE_PROMPT_NAME = "SynthesizePromptForGenerate"
@@ -46,6 +45,7 @@ class GenerateAnswer(NLWebHandler):
     def __init__(self, query_params, handler):
         super().__init__(query_params, handler)
         self.items = []
+        self.relevance_query = ""  # location-free query used for relevance ranking
         self._results_lock = asyncio.Lock()  # Add lock for thread-safe operations
         logger.info(f"GenerateAnswer initialized with query_params: {query_params}")
         log(f"GenerateAnswer query_params: {query_params}")
@@ -126,7 +126,12 @@ class GenerateAnswer(NLWebHandler):
             logger.debug(f"Ranking item: {name} from {site}")
             prompt_str, ans_struc = find_prompt(site, self.item_type, self.RANKING_PROMPT_NAME)
             description = trim_json_hard(json_str)
-            prompt = fill_prompt(prompt_str, self, {"item.description": description})
+            # Rank on the location-free relevance query so distant-but-relevant
+            # items are not downgraded for being away from a mentioned location.
+            prompt = fill_prompt(prompt_str, self, {
+                "item.description": description,
+                "request.query": self.relevance_query or self.decontextualized_query,
+            })
             logger.debug(f"Sending ranking request to LLM for item: {name}")
             ranking = await ask_llm(prompt, ans_struc, level="low", query_params=self.query_params)
             logger.debug(f"Received ranking score: {ranking.get('score', 'N/A')} for item: {name}")
@@ -167,7 +172,16 @@ class GenerateAnswer(NLWebHandler):
 
             logger.debug(f"Retrieved {len(top_embeddings)} items from database")
 
-            # Rank each item
+            # Separate the user's need from any location so relevance ranking
+            # judges only the kind of item (not how far away it is). The location
+            # is applied afterwards by distance ranking.
+            relevance_query, location, is_place_query = await self._extract_relevance_query()
+            self.relevance_query = relevance_query
+            logger.debug(
+                f"Relevance query: '{relevance_query}' | location: '{location}' | is_place_query: {is_place_query}"
+            )
+
+            # Rank each item on the location-free relevance query
             tasks = []
 
             for url, json_str, name, site in top_embeddings:
@@ -177,44 +191,23 @@ class GenerateAnswer(NLWebHandler):
 
             await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Once first-pass ranking is done, check if we should do distance-based ranking
-
             allowEmptyAnswers = False
             promptName = self.SYNTHESIZE_PROMPT_NAME
 
-            distanceRankingResponse = await PromptRunner(self).run_prompt(self.DISTANCE_RANKING_PROMPT_NAME)
-
-            if (distanceRankingResponse):
-
-                score = int(distanceRankingResponse.get("score", 0))
-
-                logger.debug(f"Distance Ranking Prompt score: {score}")
-
-                if score >= self.DISTANCE_RANKING_THRESHOLD:
-
-                    location = distanceRankingResponse.get("location")
-
-                    if not location:
-                         # If the user's location cannot be determined, we cannot perform distance-based ranking.
-                         # In this case, the user is prompted to give their location.
-                        self.final_ranked_answers = []
-                        promptName = self.SYNTHESIZE_PROMPT_NAME_NO_LOCATION
-                        allowEmptyAnswers = True  # Allow empty answers if we can't do distance ranking
-
+            # Place-seeking queries get re-ranked by travel time from the user's
+            # location; informational queries are answered from relevance alone.
+            if is_place_query:
+                if location:
+                    country_region = os.environ.get("COUNTRY_REGION")
+                    if country_region:
+                        await self.do_distance_ranking(location, country_region)
                     else:
-                        # Read the Country of interested from an environment variable.
-                        # This is needed for geocoding the user's location.
-                        # The code will throw an exception if the environment variable is not set, which is the intended behavior
-                        # since we can't do distance ranking without it.
-                        countryRegion = os.environ["COUNTRY_REGION"]
-
-                        if location and countryRegion:
-                            await self.do_distance_ranking(location, countryRegion)
-                        else:
-                            logger.error("Distance Ranking Prompt did not return valid location and/or countryRegion")
-
-            else:
-                logger.error("No Distance Ranking response received")
+                        logger.error("COUNTRY_REGION not set; skipping distance ranking")
+                else:
+                    # Place-seeking but the user's location is unknown: ask for it.
+                    self.final_ranked_answers = []
+                    promptName = self.SYNTHESIZE_PROMPT_NAME_NO_LOCATION
+                    allowEmptyAnswers = True
 
             # Synthesize the answer from ranked items
             logger.info("Ranking completed, synthesizing answer")
@@ -224,6 +217,25 @@ class GenerateAnswer(NLWebHandler):
             logger.exception(f"Error in get_ranked_answers: {e}")
             raise
 
+    async def _extract_relevance_query(self) -> tuple[str, str, bool]:
+        # Splits the (decontextualized) query into a location-free relevance
+        # query, the user's location, and whether they are seeking a physical
+        # place/service. Falls back to the decontextualized query on failure so
+        # behaviour degrades gracefully rather than dropping all results.
+        try:
+            response = await PromptRunner(self).run_prompt(self.RELEVANCE_QUERY_PROMPT_NAME, level="low")
+        except Exception as e:
+            logger.warning(f"Relevance query extraction failed: {e}")
+            response = None
+
+        if not response:
+            return self.decontextualized_query, "", True
+
+        relevance_query = (response.get("relevance_query") or "").strip()
+        location = (response.get("location") or "").strip()
+        is_place_query = str(response.get("is_place_query", "True")).strip().lower() == "true"
+
+        return (relevance_query or self.decontextualized_query), location, is_place_query
 
     async def do_distance_ranking(self, location: str, country_region: str):
         # Main entry point to rank results by travel time

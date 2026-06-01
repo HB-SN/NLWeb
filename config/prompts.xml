@@ -223,52 +223,41 @@
         }
       </returnStruc>
 			</Prompt>		
-			<Prompt ref="DistanceRankingPromptForGenerate">
+			<Prompt ref="RelevanceQueryPromptForGenerate">
 				<promptString>
-        Decide whether the user is looking for a physical place, service, or
-        facility that they would travel to or use (for example accommodation,
-        shelter, a hospital, a clinic, food, water, or a help centre). This does
-        not require literal "where is" phrasing - any request to find or reach
-        such a place counts.
-        The user's question is: \"{request.query}\".
+        The user is asking for help. Their request is: \"{request.query}\".
 
-        Assign a score between 0 and 100 reflecting how strongly the query is
-        about finding or reaching such a place or service:
-        - Give a high score (close to 100) when the user is seeking a place or
-          service they would go to or use.
-        - Give a low score (close to 0) for purely informational queries such as
-          advice, definitions, or "what should I do if..." that do not involve
-          going somewhere.
-
-        If the score is high and the query specifies the user's location, extract
-        the 'location' (town, city or region) from the user's query. If the user's
-        location is not specified, do not extract a location.
+        Separate what the user needs from where they are:
+        1. relevance_query: restate ONLY the kind of place, service, or resource
+           the user needs, with every town, city, and region name removed. Do not
+           mention any location. This is used to judge how relevant an item is,
+           independent of distance.
+        2. location: the town, city, or region the user is currently in or asking
+           about, taken from the request. If none is mentioned, leave it empty.
+        3. is_place_query: True if the user is seeking a physical place, service,
+           or facility they would travel to or use (for example accommodation,
+           shelter, a hospital, a clinic, food, or water); False for purely
+           informational requests such as advice, definitions, or
+           "what should I do" questions.
 
         Examples:
-        User Query: "I need a female-only place to stay"
-        Output: { "score": 100, "location": ""}
+        Request: "I am in Moro. I am a lone female and need help"
+        relevance_query is "help for a lone female", location is "Moro", is_place_query is True.
 
-        User Query: "Are there female-only accommodations in Moro?"
-        Output: { "score": 100, "location": "Moro"}
+        Request: "Are there female-only accommodations available in Moro for a lone female traveler?"
+        relevance_query is "female-only accommodation for a lone female", location is "Moro", is_place_query is True.
 
-        User Query: "I am in Moro. I am a lone female and need help"
-        Output: { "score": 100, "location": "Moro"}
-
-        User Query: "Where is the nearest clinic?"
-        Output: { "score": 100, "location": ""}
-
-        User Query: "What are the symptoms of cholera?"
-        Output: { "score": 0, "location": ""}
-
+        Request: "What are the symptoms of cholera?"
+        relevance_query is "symptoms of cholera", location is "", is_place_query is False.
       </promptString>
 				<returnStruc>
         {
-          "score" : "integer between 0 and 100",
-          "location": "the extracted location from the user's query, if present"          
+          "relevance_query": "the user's need with all locations removed",
+          "location": "the location from the request, if present",
+          "is_place_query": "True or False"
         }
       </returnStruc>
-			</Prompt>		
-
+			</Prompt>
     <Prompt ref="SynthesizePromptForGenerate">
       <promptString>
         Synthesize a factual, service-oriented answer for: '{request.query}' using only the provided items: {request.answers}.
