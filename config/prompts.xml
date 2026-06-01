@@ -206,10 +206,15 @@
 			<Prompt ref="RankingPromptForGenerate">
 				<promptString>
         Assign a score between 0 and 100 to the following item
-        based on useful it might be to answering the user's question. 
+        based on useful it might be to answering the user's question.
         The user's question is: \"{request.query}\".
-        The item in schema.org format is: \"{item.description}\". Include a 
+        The item in schema.org format is: \"{item.description}\". Include a
         short description of the item in the description field.
+
+        Score ONLY on whether the item is the kind of place, service, or resource
+        that meets the user's need. Do NOT lower the score because the item is in
+        a different town, city, or region from any location mentioned in the
+        question - geographic distance and travel time are handled separately.
       </promptString>
 				<returnStruc>
         {
@@ -220,20 +225,40 @@
 			</Prompt>		
 			<Prompt ref="DistanceRankingPromptForGenerate">
 				<promptString>
-        Assign a score between 0 and 100 to the following item
-        based on useful it might be to answering the user's question. 
+        Decide whether the user is looking for a physical place, service, or
+        facility that they would travel to or use (for example accommodation,
+        shelter, a hospital, a clinic, food, water, or a help centre). This does
+        not require literal "where is" phrasing - any request to find or reach
+        such a place counts.
         The user's question is: \"{request.query}\".
-        The item in schema.org format is: \"{item.description}\".         
-        If the query is related to where to find an Item, the score must be 100.
-        If the query is related to where to find an Item, and the query specifies the user's location, extract the 'location' (town, city or region) from the user's query.
-        If the query is related to where to find an Item, and the query DOES NOT specify the user's location, do not extract a location.
+
+        Assign a score between 0 and 100 reflecting how strongly the query is
+        about finding or reaching such a place or service:
+        - Give a high score (close to 100) when the user is seeking a place or
+          service they would go to or use.
+        - Give a low score (close to 0) for purely informational queries such as
+          advice, definitions, or "what should I do if..." that do not involve
+          going somewhere.
+
+        If the score is high and the query specifies the user's location, extract
+        the 'location' (town, city or region) from the user's query. If the user's
+        location is not specified, do not extract a location.
 
         Examples:
-        User Query: "I am in Hyderabad. Where is the closest hospital?"
-        Output: { "score": 100, "location": "Hyderabad"}
+        User Query: "I need a female-only place to stay"
+        Output: { "score": 100, "location": ""}
+
+        User Query: "Are there female-only accommodations in Moro?"
+        Output: { "score": 100, "location": "Moro"}
+
+        User Query: "I am in Moro. I am a lone female and need help"
+        Output: { "score": 100, "location": "Moro"}
 
         User Query: "Where is the nearest clinic?"
         Output: { "score": 100, "location": ""}
+
+        User Query: "What are the symptoms of cholera?"
+        Output: { "score": 0, "location": ""}
 
       </promptString>
 				<returnStruc>

@@ -34,7 +34,7 @@ logger = get_configured_logger("generate_answer")
 class GenerateAnswer(NLWebHandler):
 
     GATHER_ITEMS_THRESHOLD = 55
-    DISTANCE_RANKING_THRESHOLD = 100
+    DISTANCE_RANKING_THRESHOLD = 50
 
     RANKING_PROMPT_NAME = "RankingPromptForGenerate"
     DISTANCE_RANKING_PROMPT_NAME = "DistanceRankingPromptForGenerate"
