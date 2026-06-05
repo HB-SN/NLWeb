@@ -206,10 +206,15 @@
 			<Prompt ref="RankingPromptForGenerate">
 				<promptString>
         Assign a score between 0 and 100 to the following item
-        based on useful it might be to answering the user's question. 
+        based on useful it might be to answering the user's question.
         The user's question is: \"{request.query}\".
-        The item in schema.org format is: \"{item.description}\". Include a 
+        The item in schema.org format is: \"{item.description}\". Include a
         short description of the item in the description field.
+
+        Score ONLY on whether the item is the kind of place, service, or resource
+        that meets the user's need. Do NOT lower the score because the item is in
+        a different town, city, or region from any location mentioned in the
+        question - geographic distance and travel time are handled separately.
       </promptString>
 				<returnStruc>
         {
@@ -218,32 +223,47 @@
         }
       </returnStruc>
 			</Prompt>		
-			<Prompt ref="DistanceRankingPromptForGenerate">
+			<Prompt ref="RelevanceQueryPromptForGenerate">
 				<promptString>
-        Assign a score between 0 and 100 to the following item
-        based on useful it might be to answering the user's question. 
-        The user's question is: \"{request.query}\".
-        The item in schema.org format is: \"{item.description}\".         
-        If the query is related to where to find an Item, the score must be 100.
-        If the query is related to where to find an Item, and the query specifies the user's location, extract the 'location' (town, city or region) from the user's query.
-        If the query is related to where to find an Item, and the query DOES NOT specify the user's location, do not extract a location.
+        The user is asking for help. Their request is: \"{request.query}\".
+
+        Separate what the user needs from where they are:
+        1. relevance_query: restate ONLY the kind of place, service, or resource
+           the user needs, with every town, city, and region name removed. Do not
+           mention any location. Also drop any detail the user is asking ABOUT
+           that resource (such as its opening hours, opening date, phone number,
+           price, or capacity) - keep only the kind of place or service. This is
+           used to judge how relevant an item is, independent of distance and of
+           which detail was asked for.
+        2. location: the town, city, or region the user is currently in or asking
+           about, taken from the request. If none is mentioned, leave it empty.
+        3. is_place_query: True if the user is seeking a physical place, service,
+           or facility they would travel to or use (for example accommodation,
+           shelter, a hospital, a clinic, food, or water); False for purely
+           informational requests such as advice, definitions, or
+           "what should I do" questions.
 
         Examples:
-        User Query: "I am in Hyderabad. Where is the closest hospital?"
-        Output: { "score": 100, "location": "Hyderabad"}
+        Request: "I am in Moro. I am a lone female and need help"
+        relevance_query is "help for a lone female", location is "Moro", is_place_query is True.
 
-        User Query: "Where is the nearest clinic?"
-        Output: { "score": 100, "location": ""}
+        Request: "Are there female-only accommodations available in Moro for a lone female traveler?"
+        relevance_query is "female-only accommodation for a lone female", location is "Moro", is_place_query is True.
 
+        Request: "When does the female-only accommodation in Moro open?"
+        relevance_query is "female-only accommodation", location is "Moro", is_place_query is True.
+
+        Request: "What are the symptoms of cholera?"
+        relevance_query is "symptoms of cholera", location is "", is_place_query is False.
       </promptString>
 				<returnStruc>
         {
-          "score" : "integer between 0 and 100",
-          "location": "the extracted location from the user's query, if present"          
+          "relevance_query": "the user's need with all locations removed",
+          "location": "the location from the request, if present",
+          "is_place_query": "True or False"
         }
       </returnStruc>
-			</Prompt>		
-
+			</Prompt>
     <Prompt ref="SynthesizePromptForGenerate">
       <promptString>
         Synthesize a factual, service-oriented answer for: '{request.query}' using only the provided items: {request.answers}.
