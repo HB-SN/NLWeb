@@ -320,7 +320,7 @@
           MANDATORY REQUIREMENTS:
           1. The value in the answer field should be a single block of text only.
           2. The language of the answer MUST match the query.
-          3. The answer must be STRICTLY limited to 320 characters MAXIMUM.
+          3. The answer must be a COMPLETE, fully formed response that fits entirely within a STRICT 320-character MAXIMUM. Proactively condense and edit the text so it concludes naturally with proper punctuation; it must NEVER be truncated or cut off mid-sentence.
           4. NO URLs allowed in the answer field.
           5. If the user query explicitly mentions a MedicalCondition AND the user has provided
           their location, include a related CivicStructure that can help with the condition.
@@ -333,6 +333,7 @@
           9. Never attempt to synthesize information that is not present in the data.
           10.Never attempt medical diagnosis.
           11. For items have a very similar score, and were both items have a travel time, prioritze the item with the shorter travel time, even if the score is slightly lower, as long as the score is above 75.
+          12. Convert all travel times from raw seconds into a natural, human-readable format (e.g., convert 1907 seconds to '32 minutes', 3700 seconds to '1 hour', or '1 hour 15 minutes'). Never display raw seconds.        
         </promptString>
         <returnStruc>
           {
