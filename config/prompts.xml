@@ -333,7 +333,7 @@
           9. Never attempt to synthesize information that is not present in the data.
           10.Never attempt medical diagnosis.
           11. For items have a very similar score, and were both items have a travel time, prioritze the item with the shorter travel time, even if the score is slightly lower, as long as the score is above 75.
-          12. Do not display travel times if less than 5 minutes, as they are likely to be inaccurate and not meaningful to the user. Instead, just treat those as "very close" or "within walking distance" without specifying a time.
+          12. Do not display travel times if less than 5 minutes, as they are likely to be inaccurate and not meaningful to the user.
           13. If travel times are in the reponses, convert all travel times from raw seconds into a natural, human-readable format (e.g., convert 1907 seconds to '32 minutes', 3700 seconds to '1 hour', or '1 hour 15 minutes'). Never display raw seconds.        
           14. For Events, always give the date and start time of the event in the answer, if that information is available in the data, and format it in a natural way (e.g., "on March 5th at 3 PM", etc). 
         </promptString>
