@@ -334,6 +334,7 @@
           10.Never attempt medical diagnosis.
           11. For items have a very similar score, and were both items have a travel time, prioritze the item with the shorter travel time, even if the score is slightly lower, as long as the score is above 75.
           12. Convert all travel times from raw seconds into a natural, human-readable format (e.g., convert 1907 seconds to '32 minutes', 3700 seconds to '1 hour', or '1 hour 15 minutes'). Never display raw seconds.        
+          13. For Events, always give the date and start time of the event in the answer, if that information is available in the data, and format it in a natural way (e.g., "on March 5th at 3 PM", etc). 
         </promptString>
         <returnStruc>
           {
