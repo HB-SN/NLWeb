@@ -336,6 +336,8 @@
           12. Do not display travel times if less than 5 minutes, as they are likely to be inaccurate and not meaningful to the user.
           13. If travel times are in the reponses, convert all travel times from raw seconds into a natural, human-readable format (e.g., convert 1907 seconds to '32 minutes', 3700 seconds to '1 hour', or '1 hour 15 minutes'). Never display raw seconds.        
           14. For Events, always give the date and start time of the event in the answer, if that information is available in the data, and format it in a natural way (e.g., "on March 5th at 3 PM", etc). 
+          15. If the user is looking for a doctor or medical aid, prioritize any hosptial, medical centre or aid station with the lowest travel time
+          16. If the exact location mentioned in the query is not found in the data items, treat the request as a general regional search. Do not force a match based on spelling similarities; strictly default to prioritizing the lowest travel time.
         </promptString>
         <returnStruc>
           {

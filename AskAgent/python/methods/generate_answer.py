@@ -217,7 +217,7 @@ class GenerateAnswer(NLWebHandler):
 
             else:
                 logger.error("No Distance Ranking response received")
-
+            
             # Synthesize the answer from ranked items
             logger.info("Ranking completed, synthesizing answer")            
             await self.synthesizeAnswer(allowEmptyAnswers, promptName)  
